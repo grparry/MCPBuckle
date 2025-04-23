@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>MCPBuckle</id>
+    <version>1.0.0</version>
+    <title>MCPBuckle</title>
+    <authors>MCPBuckle Contributors</authors>
+    <owners>MCPBuckle Contributors</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <license type="expression">MIT</license>
+    <projectUrl>https://github.com/grparry/MCPBuckle</projectUrl>
+    <description>MCPBuckle is a lightweight .NET library that generates Model Context Protocol (MCP) JSON from ASP.NET Core API metadata. It works alongside Swashbuckle to enable AI agent discovery of your APIs.</description>
+    <releaseNotes>Initial release of MCPBuckle.</releaseNotes>
+    <copyright>Copyright 2025</copyright>
+    <tags>mcp swagger openapi swashbuckle ai agent discovery aspnetcore</tags>
+    <repository type="git" url="https://github.com/grparry/MCPBuckle.git" />
+    <dependencies>
+      <group targetFramework="net6.0">
+        <dependency id="Microsoft.AspNetCore.Mvc.Core" version="2.2.5" />
+        <dependency id="Microsoft.AspNetCore.Http.Abstractions" version="2.2.0" />
+        <dependency id="Microsoft.Extensions.Options" version="6.0.0" />
+      </group>
+      <group targetFramework="net7.0">
+        <dependency id="Microsoft.AspNetCore.Mvc.Core" version="2.2.5" />
+        <dependency id="Microsoft.AspNetCore.Http.Abstractions" version="2.2.0" />
+        <dependency id="Microsoft.Extensions.Options" version="7.0.0" />
+      </group>
+      <group targetFramework="net8.0">
+        <dependency id="Microsoft.AspNetCore.Mvc.Core" version="2.2.5" />
+        <dependency id="Microsoft.AspNetCore.Http.Abstractions" version="2.2.0" />
+        <dependency id="Microsoft.Extensions.Options" version="8.0.0" />
+      </group>
+      <group targetFramework="net9.0">
+        <dependency id="Microsoft.AspNetCore.Mvc.Core" version="2.2.5" />
+        <dependency id="Microsoft.AspNetCore.Http.Abstractions" version="2.2.0" />
+        <dependency id="Microsoft.Extensions.Options" version="9.0.0" />
+      </group>
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="bin\Release\net6.0\MCPBuckle.dll" target="lib\net6.0" />
+    <file src="bin\Release\net6.0\MCPBuckle.xml" target="lib\net6.0" />
+    <file src="bin\Release\net7.0\MCPBuckle.dll" target="lib\net7.0" />
+    <file src="bin\Release\net7.0\MCPBuckle.xml" target="lib\net7.0" />
+    <file src="bin\Release\net8.0\MCPBuckle.dll" target="lib\net8.0" />
+    <file src="bin\Release\net8.0\MCPBuckle.xml" target="lib\net8.0" />
+    <file src="bin\Release\net9.0\MCPBuckle.dll" target="lib\net9.0" />
+    <file src="bin\Release\net9.0\MCPBuckle.xml" target="lib\net9.0" />
+  </files>
+</package>

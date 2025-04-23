@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MCPBuckle", "MCPBuckle\MCPBuckle.csproj", "{8C958057-DDD8-4214-90AE-D85EF0EBCFE9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MCPBuckle.Example", "MCPBuckle.Example\MCPBuckle.Example.csproj", "{D2DAA150-CA2A-4A0F-9826-D210FAB51DC3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MCPBuckle.Tests", "MCPBuckle.Tests\MCPBuckle.Tests.csproj", "{DCB41FD0-75A4-49CC-BC18-C7812C7A84D4}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{8C958057-DDD8-4214-90AE-D85EF0EBCFE9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8C958057-DDD8-4214-90AE-D85EF0EBCFE9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8C958057-DDD8-4214-90AE-D85EF0EBCFE9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8C958057-DDD8-4214-90AE-D85EF0EBCFE9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D2DAA150-CA2A-4A0F-9826-D210FAB51DC3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D2DAA150-CA2A-4A0F-9826-D210FAB51DC3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D2DAA150-CA2A-4A0F-9826-D210FAB51DC3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D2DAA150-CA2A-4A0F-9826-D210FAB51DC3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DCB41FD0-75A4-49CC-BC18-C7812C7A84D4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DCB41FD0-75A4-49CC-BC18-C7812C7A84D4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DCB41FD0-75A4-49CC-BC18-C7812C7A84D4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DCB41FD0-75A4-49CC-BC18-C7812C7A84D4}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
