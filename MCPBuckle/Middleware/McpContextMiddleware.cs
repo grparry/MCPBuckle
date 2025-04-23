@@ -42,9 +42,9 @@ namespace MCPBuckle.Middleware
         /// Processes the request.
         /// </summary>
         /// <param name="context">The HTTP context.</param>
-        /// <param name="mcpContextGenerator">The MCP context generator.</param>
+        /// <param name="contextGenerator">The MCP context generator.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
-        public async Task InvokeAsync(HttpContext context, McpContextGenerator mcpContextGenerator)
+        public async Task InvokeAsync(HttpContext context, IContextGenerator contextGenerator)
         {
             // Check if the request is for the MCP context
             if (context.Request.Path.Equals(_path, StringComparison.OrdinalIgnoreCase))
@@ -54,7 +54,7 @@ namespace MCPBuckle.Middleware
                 try
                 {
                     // Generate the MCP context
-                    var mcpContext = mcpContextGenerator.GenerateContext();
+                    var mcpContext = contextGenerator.GenerateContext();
 
                     // Set the content type
                     context.Response.ContentType = "application/json";

@@ -14,13 +14,20 @@ namespace MCPBuckle.Services
     /// <summary>
     /// Service for discovering controllers and their actions in an ASP.NET Core application.
     /// </summary>
-    public class ControllerDiscoveryService
+    public class ControllerDiscoveryService : IControllerDiscoveryService
     {
         private readonly IActionDescriptorCollectionProvider _actionDescriptorCollectionProvider;
         private readonly XmlDocumentationService _xmlDocumentationService;
         private readonly TypeSchemaGenerator _typeSchemaGenerator;
         private readonly McpBuckleOptions _options;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ControllerDiscoveryService"/> class.
+        /// </summary>
+        /// <param name="actionDescriptorCollectionProvider">The action descriptor collection provider.</param>
+        /// <param name="xmlDocumentationService">The XML documentation service.</param>
+        /// <param name="typeSchemaGenerator">The type schema generator.</param>
+        /// <param name="options">The MCPBuckle options.</param>
         public ControllerDiscoveryService(
             IActionDescriptorCollectionProvider actionDescriptorCollectionProvider,
             XmlDocumentationService xmlDocumentationService,
@@ -138,7 +145,25 @@ namespace MCPBuckle.Services
             var properties = new Dictionary<string, McpSchema>();
             var required = new List<string>();
 
-            // Process parameters
+            // Check if there's a single complex type parameter that would be bound from the body
+            var bodyParameter = actionDescriptor.Parameters
+                .FirstOrDefault(p => 
+                    // Check for [FromBody] attribute
+                    p.BindingInfo?.BindingSource?.Id == "Body" ||
+                    // Or check if it's a complex type (class) that would be implicitly bound from body
+                    (p.ParameterType.IsClass && 
+                     p.ParameterType != typeof(string) && 
+                     !p.ParameterType.IsArray &&
+                     !typeof(System.Collections.IEnumerable).IsAssignableFrom(p.ParameterType)));
+
+            // If we have a body parameter that's a complex type, use its schema directly
+            if (bodyParameter != null && bodyParameter.ParameterType.IsClass && bodyParameter.ParameterType != typeof(string))
+            {
+                // For a complex type bound from body, return its schema directly without nesting
+                return _typeSchemaGenerator.GenerateSchema(bodyParameter.ParameterType);
+            }
+
+            // Otherwise, process all parameters normally
             foreach (var parameter in actionDescriptor.Parameters)
             {
                 // Generate schema for parameter type

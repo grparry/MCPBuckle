@@ -1,9 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using Microsoft.AspNetCore.Mvc.Abstractions;
-using Microsoft.AspNetCore.Mvc.Controllers;
-using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -21,18 +17,21 @@ namespace MCPBuckle.Tests
         {
             // Arrange
             var mockLogger = new Mock<ILogger<McpContextGenerator>>();
-            var mockActionDescriptorCollectionProvider = SetupMockActionDescriptorCollectionProvider();
-            var mockXmlDocumentationService = new Mock<XmlDocumentationService>();
-            var mockTypeSchemaGenerator = new Mock<TypeSchemaGenerator>(mockXmlDocumentationService.Object, Options.Create(new McpBuckleOptions()));
-            var mockOptions = new Mock<IOptions<McpBuckleOptions>>();
-            mockOptions.Setup(o => o.Value).Returns(new McpBuckleOptions());
+            var mockDiscoveryService = new Mock<IControllerDiscoveryService>();
+            var mockXmlDocumentationService = new Mock<XmlDocumentationService>(MockBehavior.Loose);
+            var options = Options.Create(new McpBuckleOptions());
+            var typeSchemaGenerator = new TypeSchemaGenerator(mockXmlDocumentationService.Object, options);
+            
+            // Setup the discovery service to return a list of tools
+            mockDiscoveryService.Setup(d => d.DiscoverTools()).Returns(new List<McpTool>
+            {
+                new McpTool { Name = "Test_Tool", Description = "Test tool description" }
+            });
             
             var generator = new McpContextGenerator(
-                mockActionDescriptorCollectionProvider.Object,
-                mockXmlDocumentationService.Object,
-                mockTypeSchemaGenerator.Object,
+                mockDiscoveryService.Object,
                 mockLogger.Object,
-                mockOptions.Object);
+                options);
 
             // Act
             var context = generator.GenerateContext();
@@ -40,6 +39,8 @@ namespace MCPBuckle.Tests
             // Assert
             Assert.NotNull(context);
             Assert.NotNull(context.Tools);
+            Assert.Single(context.Tools);
+            Assert.Equal("Test_Tool", context.Tools[0].Name);
             Assert.NotNull(context.Metadata);
             Assert.True(context.Metadata.ContainsKey("generator"));
             Assert.Equal("MCPBuckle", context.Metadata["generator"]);
@@ -50,25 +51,27 @@ namespace MCPBuckle.Tests
         {
             // Arrange
             var mockLogger = new Mock<ILogger<McpContextGenerator>>();
-            var mockActionDescriptorCollectionProvider = SetupMockActionDescriptorCollectionProvider();
-            var mockXmlDocumentationService = new Mock<XmlDocumentationService>();
-            var mockTypeSchemaGenerator = new Mock<TypeSchemaGenerator>(mockXmlDocumentationService.Object, Options.Create(new McpBuckleOptions()));
-            var mockOptions = new Mock<IOptions<McpBuckleOptions>>();
-            mockOptions.Setup(o => o.Value).Returns(new McpBuckleOptions());
+            var mockDiscoveryService = new Mock<IControllerDiscoveryService>();
+            var options = Options.Create(new McpBuckleOptions());
+            
+            // Setup the discovery service to return a list of tools
+            mockDiscoveryService.Setup(d => d.DiscoverTools()).Returns(new List<McpTool>
+            {
+                new McpTool { Name = "Test_Tool", Description = "Test tool description" }
+            });
             
             var generator = new McpContextGenerator(
-                mockActionDescriptorCollectionProvider.Object,
-                mockXmlDocumentationService.Object,
-                mockTypeSchemaGenerator.Object,
+                mockDiscoveryService.Object,
                 mockLogger.Object,
-                mockOptions.Object);
+                options);
 
             // Act
             var context1 = generator.GenerateContext();
             var context2 = generator.GenerateContext();
 
             // Assert
-            Assert.Same(context1, context2); // Should return the same instance (cached)
+            Assert.Same(context1, context2); // Should be the same instance due to caching
+            mockDiscoveryService.Verify(d => d.DiscoverTools(), Times.Once);
         }
 
         [Fact]
@@ -76,65 +79,28 @@ namespace MCPBuckle.Tests
         {
             // Arrange
             var mockLogger = new Mock<ILogger<McpContextGenerator>>();
-            var mockActionDescriptorCollectionProvider = SetupMockActionDescriptorCollectionProvider();
-            var mockXmlDocumentationService = new Mock<XmlDocumentationService>();
-            var mockTypeSchemaGenerator = new Mock<TypeSchemaGenerator>(mockXmlDocumentationService.Object, Options.Create(new McpBuckleOptions()));
-            var mockOptions = new Mock<IOptions<McpBuckleOptions>>();
-            mockOptions.Setup(o => o.Value).Returns(new McpBuckleOptions());
+            var mockDiscoveryService = new Mock<IControllerDiscoveryService>();
+            var options = Options.Create(new McpBuckleOptions());
+            
+            // Setup the discovery service to return a list of tools
+            mockDiscoveryService.Setup(d => d.DiscoverTools()).Returns(new List<McpTool>
+            {
+                new McpTool { Name = "Test_Tool", Description = "Test tool description" }
+            });
             
             var generator = new McpContextGenerator(
-                mockActionDescriptorCollectionProvider.Object,
-                mockXmlDocumentationService.Object,
-                mockTypeSchemaGenerator.Object,
+                mockDiscoveryService.Object,
                 mockLogger.Object,
-                mockOptions.Object);
+                options);
 
-            // Act
+            // Act - Get context, invalidate cache, get context again
             var context1 = generator.GenerateContext();
             generator.InvalidateCache();
             var context2 = generator.GenerateContext();
 
             // Assert
-            Assert.NotSame(context1, context2); // Should return different instances after cache invalidation
-        }
-
-        private Mock<IActionDescriptorCollectionProvider> SetupMockActionDescriptorCollectionProvider()
-        {
-            var mockProvider = new Mock<IActionDescriptorCollectionProvider>();
-            var actionDescriptors = new ActionDescriptorCollection(
-                new List<ActionDescriptor>
-                {
-                    CreateMockControllerActionDescriptor("TestController", "Get", "HttpGet")
-                },
-                0);
-
-            mockProvider.Setup(p => p.ActionDescriptors).Returns(actionDescriptors);
-            return mockProvider;
-        }
-
-        private ControllerActionDescriptor CreateMockControllerActionDescriptor(
-            string controllerName,
-            string actionName,
-            string httpMethod)
-        {
-            var descriptor = new ControllerActionDescriptor
-            {
-                ControllerName = controllerName,
-                ActionName = actionName,
-                DisplayName = $"{controllerName}.{actionName}"
-            };
-
-            // Add a mock method info with HTTP method attribute
-            var mockMethodInfo = new Mock<System.Reflection.MethodInfo>();
-            var mockHttpAttribute = new Mock<Attribute>();
-            mockHttpAttribute.Setup(a => a.GetType().Name).Returns($"{httpMethod}Attribute");
-            
-            mockMethodInfo.Setup(m => m.GetCustomAttributes(It.IsAny<bool>()))
-                .Returns(new[] { mockHttpAttribute.Object });
-
-            descriptor.MethodInfo = mockMethodInfo.Object;
-
-            return descriptor;
+            Assert.NotSame(context1, context2); // Should be different instances after cache invalidation
+            mockDiscoveryService.Verify(d => d.DiscoverTools(), Times.Exactly(2));
         }
     }
 }

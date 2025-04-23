@@ -33,8 +33,13 @@ namespace MCPBuckle.Extensions
             // Configure options
             services.Configure<McpBuckleOptions>(setupAction);
 
+            // Register the controller discovery service as a singleton
+            services.AddSingleton<ControllerDiscoveryService>();
+            services.AddSingleton<IControllerDiscoveryService>(sp => sp.GetRequiredService<ControllerDiscoveryService>());
+            
             // Register the MCP context generator as a singleton
             services.AddSingleton<McpContextGenerator>();
+            services.AddSingleton<IContextGenerator>(sp => sp.GetRequiredService<McpContextGenerator>());
             
             // Register the XML documentation service as a singleton
             services.AddSingleton<XmlDocumentationService>();

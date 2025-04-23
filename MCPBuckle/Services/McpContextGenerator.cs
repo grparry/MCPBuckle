@@ -11,11 +11,9 @@ namespace MCPBuckle.Services
     /// <summary>
     /// Service for generating MCP context from ASP.NET Core controllers and actions.
     /// </summary>
-    public class McpContextGenerator
+    public class McpContextGenerator : IContextGenerator
     {
-        private readonly IActionDescriptorCollectionProvider _actionDescriptorCollectionProvider;
-        private readonly XmlDocumentationService _xmlDocumentationService;
-        private readonly TypeSchemaGenerator _typeSchemaGenerator;
+        private readonly IControllerDiscoveryService _controllerDiscoveryService;
         private readonly ILogger<McpContextGenerator> _logger;
         private readonly McpBuckleOptions _options;
         private McpContext? _cachedContext;
@@ -23,21 +21,15 @@ namespace MCPBuckle.Services
         /// <summary>
         /// Initializes a new instance of the <see cref="McpContextGenerator"/> class.
         /// </summary>
-        /// <param name="actionDescriptorCollectionProvider">The action descriptor collection provider.</param>
-        /// <param name="xmlDocumentationService">The XML documentation service.</param>
-        /// <param name="typeSchemaGenerator">The type schema generator.</param>
+        /// <param name="controllerDiscoveryService">The controller discovery service.</param>
         /// <param name="logger">The logger.</param>
         /// <param name="options">The MCPBuckle options.</param>
         public McpContextGenerator(
-            IActionDescriptorCollectionProvider actionDescriptorCollectionProvider,
-            XmlDocumentationService xmlDocumentationService,
-            TypeSchemaGenerator typeSchemaGenerator,
+            IControllerDiscoveryService controllerDiscoveryService,
             ILogger<McpContextGenerator> logger,
             IOptions<McpBuckleOptions> options)
         {
-            _actionDescriptorCollectionProvider = actionDescriptorCollectionProvider;
-            _xmlDocumentationService = xmlDocumentationService;
-            _typeSchemaGenerator = typeSchemaGenerator;
+            _controllerDiscoveryService = controllerDiscoveryService;
             _logger = logger;
             _options = options.Value;
         }
@@ -58,13 +50,8 @@ namespace MCPBuckle.Services
 
             try
             {
-                var controllerDiscovery = new ControllerDiscoveryService(
-                    _actionDescriptorCollectionProvider,
-                    _xmlDocumentationService,
-                    _typeSchemaGenerator,
-                    Options.Create(_options));
-
-                var tools = controllerDiscovery.DiscoverTools();
+                // Use the injected controller discovery service
+                var tools = _controllerDiscoveryService.DiscoverTools();
 
                 // Create metadata dictionary starting with default values
                 var metadata = new Dictionary<string, object>

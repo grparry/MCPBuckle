@@ -19,10 +19,8 @@ namespace MCPBuckle.Tests
         {
             // Arrange
             var mockLogger = new Mock<ILogger<McpContextMiddleware>>();
-            var mockGenerator = new Mock<McpContextGenerator>(
-                Mock.Of<Microsoft.AspNetCore.Mvc.Infrastructure.IActionDescriptorCollectionProvider>(),
-                Mock.Of<ILogger<McpContextGenerator>>());
-
+            
+            // Create a simple McpContext to return
             var mcpContext = new McpContext
             {
                 Tools = new System.Collections.Generic.List<McpTool>
@@ -35,6 +33,8 @@ namespace MCPBuckle.Tests
                 }
             };
 
+            // Create a simple mock generator that returns our test context
+            var mockGenerator = new Mock<IContextGenerator>();
             mockGenerator.Setup(g => g.GenerateContext()).Returns(mcpContext);
 
             var middleware = new McpContextMiddleware(
@@ -80,10 +80,13 @@ namespace MCPBuckle.Tests
             var context = new DefaultHttpContext();
             context.Request.Path = "/api/values";
 
+            // Create a mock generator with a working setup
+            var mockGenerator = new Mock<IContextGenerator>();
+            
             // Act
             await middleware.InvokeAsync(
                 context,
-                Mock.Of<McpContextGenerator>());
+                mockGenerator.Object);
 
             // Assert
             Assert.True(nextCalled);
