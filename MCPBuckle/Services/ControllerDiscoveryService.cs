@@ -137,6 +137,16 @@ namespace MCPBuckle.Services
                 InputSchema = CreateInputSchema(actionDescriptor)
             };
 
+            // Populate annotations with handler and method info
+            if (actionDescriptor.ControllerTypeInfo?.AsType() != null)
+            {
+                tool.Annotations["HandlerTypeAssemblyQualifiedName"] = actionDescriptor.ControllerTypeInfo.AsType().AssemblyQualifiedName;
+            }
+            if (actionDescriptor.MethodInfo != null)
+            {
+                tool.Annotations["MethodName"] = actionDescriptor.MethodInfo.Name;
+            }
+
             return tool;
         }
 
