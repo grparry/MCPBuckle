@@ -19,7 +19,11 @@ namespace MCPBuckle.Tests
             var mockLogger = new Mock<ILogger<McpContextGenerator>>();
             var mockDiscoveryService = new Mock<IControllerDiscoveryService>();
             var mockXmlDocumentationService = new Mock<XmlDocumentationService>(MockBehavior.Loose);
-            var options = Options.Create(new McpBuckleOptions());
+            var options = Options.Create(new McpBuckleOptions
+            {
+                SchemaVersion = "1.0",
+                ServerTitle = "Test API"
+            });
             var typeSchemaGenerator = new TypeSchemaGenerator(mockXmlDocumentationService.Object, options);
             
             // Setup the discovery service to return a list of tools
@@ -52,7 +56,11 @@ namespace MCPBuckle.Tests
             // Arrange
             var mockLogger = new Mock<ILogger<McpContextGenerator>>();
             var mockDiscoveryService = new Mock<IControllerDiscoveryService>();
-            var options = Options.Create(new McpBuckleOptions());
+            var options = Options.Create(new McpBuckleOptions
+            {
+                SchemaVersion = "1.0",
+                ServerTitle = "Test API"
+            });
             
             // Setup the discovery service to return a list of tools
             mockDiscoveryService.Setup(d => d.DiscoverTools()).Returns(new List<McpTool>
@@ -80,7 +88,11 @@ namespace MCPBuckle.Tests
             // Arrange
             var mockLogger = new Mock<ILogger<McpContextGenerator>>();
             var mockDiscoveryService = new Mock<IControllerDiscoveryService>();
-            var options = Options.Create(new McpBuckleOptions());
+            var options = Options.Create(new McpBuckleOptions
+            {
+                SchemaVersion = "1.0",
+                ServerTitle = "Test API"
+            });
             
             // Setup the discovery service to return a list of tools
             mockDiscoveryService.Setup(d => d.DiscoverTools()).Returns(new List<McpTool>
