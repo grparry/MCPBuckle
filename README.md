@@ -19,6 +19,28 @@ MCPBuckle is designed to be a **complementary tool** to Swashbuckle, not a repla
 - Support for required fields, enums, arrays, and nested objects
 - Customizable tool naming and metadata
 
+## What's New in 1.4.0
+
+### MCP Specification Compliance Improvements
+- Added proper `McpInfo` class to support the info section as required by the MCP specification
+- Updated `McpContext` model to include the enhanced info section
+- Added schema version, server title, and description properties to configuration options
+
+### Granular Control Over Exposed Endpoints
+- Added new `MCPExcludeAttribute` to exclude specific controllers or actions from MCP tool discovery
+- Enhanced controller discovery with support for selectively exposing endpoints
+- Added ability to prevent overwhelming AI clients with too many tools
+
+### Improved Configuration Options
+- Added new extension methods (`ControllerDiscoveryExtensions`) for easier MCPBuckle configuration
+- Enhanced `McpBuckleOptions` with additional configuration properties
+- Added support for scanning specific assemblies for controllers
+
+### Code Quality Improvements
+- Fixed compiler warnings related to nullable reference types
+- Improved XML documentation
+- Enhanced null handling for better reliability
+
 ## Installation
 
 Install the MCPBuckle NuGet package:
@@ -66,7 +88,23 @@ builder.Services.AddMcpBuckle(options =>
         { "name", "API Team" },
         { "url", "https://example.com/contact" }
     });
+    
+    // New in 1.4.0: MCP info section configuration
+    options.SchemaVersion = "1.0";
+    options.ServerTitle = "My API";
+    options.ServerDescription = "A comprehensive API for managing resources";
 });
+
+// New in 1.4.0: Controller discovery with assembly scanning
+builder.Services.AddMcpControllerDiscovery(
+    options => {
+        // Configure options as above
+        options.IncludeControllerNameInToolName = true;
+    },
+    // Specify assemblies to scan for controllers
+    typeof(Program).Assembly,
+    typeof(ExternalLibrary.Controller).Assembly
+);
 ```
 
 3. Add the MCPBuckle middleware to your application pipeline:
@@ -93,7 +131,31 @@ public ActionResult<IEnumerable<TodoItem>> GetAll()
 }
 ```
 
-5. Your API will now serve MCP JSON at `/.well-known/mcp-context`.
+5. Use the new `MCPExcludeAttribute` to exclude specific controllers or actions from MCP tool discovery (new in 1.4.0):
+
+```csharp
+// Exclude an entire controller
+[MCPExclude("Internal use only")]
+public class InternalController : ControllerBase
+{
+    // This entire controller will be excluded from MCP discovery
+}
+
+// Exclude a specific action method
+public class ProductsController : ControllerBase
+{
+    // This method will be included in MCP discovery
+    [HttpGet]
+    public ActionResult<IEnumerable<Product>> GetAll() { /* ... */ }
+    
+    // This method will be excluded from MCP discovery
+    [HttpPost]
+    [MCPExclude("Requires special permissions")]
+    public ActionResult<Product> Create(Product product) { /* ... */ }
+}
+```
+
+6. Your API will now serve MCP JSON at `/.well-known/mcp-context`.
 
 ## Side-by-Side with Swashbuckle
 

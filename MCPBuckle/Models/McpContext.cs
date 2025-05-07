@@ -9,6 +9,12 @@ namespace MCPBuckle.Models
     public class McpContext
     {
         /// <summary>
+        /// Gets or sets the info section with MCP schema version and server details.
+        /// </summary>
+        [JsonPropertyName("info")]
+        public McpInfo Info { get; set; } = new McpInfo();
+
+        /// <summary>
         /// Gets or sets the list of tools available in this MCP context.
         /// </summary>
         [JsonPropertyName("tools")]

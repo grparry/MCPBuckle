@@ -50,6 +50,9 @@ namespace MCPBuckle.Services
 
             try
             {
+                // Validate required parameters
+                ValidateRequiredParameters();
+                
                 // Use the injected controller discovery service
                 var tools = _controllerDiscoveryService.DiscoverTools();
 
@@ -70,6 +73,12 @@ namespace MCPBuckle.Services
 
                 _cachedContext = new McpContext
                 {
+                    Info = new McpInfo
+                    {
+                        SchemaVersion = _options.SchemaVersion,
+                        Title = _options.ServerTitle,
+                        Description = _options.ServerDescription
+                    },
                     Tools = tools,
                     Metadata = metadata
                 };
@@ -92,6 +101,23 @@ namespace MCPBuckle.Services
         {
             _logger.LogInformation("Invalidating MCP context cache");
             _cachedContext = null;
+        }
+
+        /// <summary>
+        /// Validates that all required parameters are set in the options.
+        /// </summary>
+        /// <exception cref="InvalidOperationException">Thrown when a required parameter is missing.</exception>
+        private void ValidateRequiredParameters()
+        {
+            if (string.IsNullOrWhiteSpace(_options.SchemaVersion))
+            {
+                throw new InvalidOperationException("The MCP schema version is required. Set it in McpBuckleOptions.SchemaVersion.");
+            }
+
+            if (string.IsNullOrWhiteSpace(_options.ServerTitle))
+            {
+                throw new InvalidOperationException("The MCP server title is required. Set it in McpBuckleOptions.ServerTitle.");
+            }
         }
     }
 }

@@ -46,6 +46,33 @@ namespace MCPBuckle.Configuration
         public Func<string, string, string>? CustomToolNameFactory { get; set; }
 
         /// <summary>
+        /// Gets or sets the list of assemblies to scan for controllers and MCP tools.
+        /// If null or empty, the entry assembly will be used.
+        /// </summary>
+        public List<System.Reflection.Assembly>? AssembliesToScan { get; set; }
+
+        /// <summary>
+        /// Gets or sets the MCP schema version to use in the info section.
+        /// </summary>
+        /// <remarks>
+        /// This is required by the MCP specification.
+        /// </remarks>
+        public string SchemaVersion { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Gets or sets the title of the MCP server for the info section.
+        /// </summary>
+        /// <remarks>
+        /// This is required by the MCP specification.
+        /// </remarks>
+        public string ServerTitle { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Gets or sets the description of the MCP server for the info section.
+        /// </summary>
+        public string? ServerDescription { get; set; }
+
+        /// <summary>
         /// Gets or sets a value indicating whether to include XML documentation.
         /// </summary>
         /// <remarks>

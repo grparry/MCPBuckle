@@ -5,7 +5,9 @@ using System.Reflection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using MCPBuckle.Attributes;
 using MCPBuckle.Configuration;
 using MCPBuckle.Models;
 
@@ -20,6 +22,7 @@ namespace MCPBuckle.Services
         private readonly XmlDocumentationService _xmlDocumentationService;
         private readonly TypeSchemaGenerator _typeSchemaGenerator;
         private readonly McpBuckleOptions _options;
+        private readonly ILogger<ControllerDiscoveryService>? _logger;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ControllerDiscoveryService"/> class.
@@ -28,16 +31,19 @@ namespace MCPBuckle.Services
         /// <param name="xmlDocumentationService">The XML documentation service.</param>
         /// <param name="typeSchemaGenerator">The type schema generator.</param>
         /// <param name="options">The MCPBuckle options.</param>
+        /// <param name="logger">The logger for logging messages.</param>
         public ControllerDiscoveryService(
             IActionDescriptorCollectionProvider actionDescriptorCollectionProvider,
             XmlDocumentationService xmlDocumentationService,
             TypeSchemaGenerator typeSchemaGenerator,
-            IOptions<McpBuckleOptions> options)
+            IOptions<McpBuckleOptions> options,
+            ILogger<ControllerDiscoveryService>? logger = null)
         {
             _actionDescriptorCollectionProvider = actionDescriptorCollectionProvider;
             _xmlDocumentationService = xmlDocumentationService;
             _typeSchemaGenerator = typeSchemaGenerator;
             _options = options.Value;
+            _logger = logger;
         }
 
         /// <summary>
@@ -47,7 +53,15 @@ namespace MCPBuckle.Services
         public List<McpTool> DiscoverTools()
         {
             var tools = new List<McpTool>();
+            
+            // Get action descriptors from ASP.NET Core infrastructure
             var actionDescriptors = _actionDescriptorCollectionProvider.ActionDescriptors.Items;
+            _logger?.LogInformation("Discovering MCP tools from {Count} action descriptors", actionDescriptors.Count);
+            
+            // Track stats for logging
+            int includedTools = 0;
+            int excludedControllers = 0;
+            int excludedMethods = 0;
 
             foreach (var descriptor in actionDescriptors)
             {
@@ -56,6 +70,7 @@ namespace MCPBuckle.Services
                     // Skip if controller is excluded or not included
                     if (ShouldSkipController(controllerActionDescriptor.ControllerName))
                     {
+                        excludedControllers++;
                         continue;
                     }
 
@@ -63,9 +78,17 @@ namespace MCPBuckle.Services
                     if (tool != null)
                     {
                         tools.Add(tool);
+                        includedTools++;
+                    }
+                    else
+                    {
+                        excludedMethods++;
                     }
                 }
             }
+            
+            _logger?.LogInformation("MCP tool discovery complete. Included: {IncludedTools}, Excluded controllers: {ExcludedControllers}, Excluded methods: {ExcludedMethods}", 
+                includedTools, excludedControllers, excludedMethods);
 
             return tools;
         }
@@ -89,6 +112,29 @@ namespace MCPBuckle.Services
 
         private McpTool? CreateToolFromAction(ControllerActionDescriptor actionDescriptor)
         {
+            // Check for MCPExclude attribute on the controller level
+            var controllerType = actionDescriptor.ControllerTypeInfo;
+            var controllerExcludeAttr = controllerType.GetCustomAttribute<MCPExcludeAttribute>();
+            if (controllerExcludeAttr != null)
+            {
+                _logger?.LogDebug("Excluding controller {ControllerName} due to MCPExclude attribute. Reason: {Reason}",
+                    actionDescriptor.ControllerName,
+                    string.IsNullOrEmpty(controllerExcludeAttr.Reason) ? "Not specified" : controllerExcludeAttr.Reason);
+                return null;
+            }
+
+            // Check for MCPExclude attribute on the method level
+            var methodInfo = actionDescriptor.MethodInfo;
+            var methodExcludeAttr = methodInfo.GetCustomAttribute<MCPExcludeAttribute>();
+            if (methodExcludeAttr != null)
+            {
+                _logger?.LogDebug("Excluding method {ControllerName}.{MethodName} due to MCPExclude attribute. Reason: {Reason}",
+                    actionDescriptor.ControllerName,
+                    actionDescriptor.ActionName,
+                    string.IsNullOrEmpty(methodExcludeAttr.Reason) ? "Not specified" : methodExcludeAttr.Reason);
+                return null;
+            }
+
             // Skip actions that don't have an HTTP method attribute
             var httpMethodAttribute = actionDescriptor.MethodInfo
                 .GetCustomAttributes()
@@ -140,7 +186,11 @@ namespace MCPBuckle.Services
             // Populate annotations with handler and method info
             if (actionDescriptor.ControllerTypeInfo?.AsType() != null)
             {
-                tool.Annotations["HandlerTypeAssemblyQualifiedName"] = actionDescriptor.ControllerTypeInfo.AsType().AssemblyQualifiedName;
+                string? assemblyQualifiedName = actionDescriptor.ControllerTypeInfo.AsType().AssemblyQualifiedName;
+                if (assemblyQualifiedName != null)
+                {
+                    tool.Annotations["HandlerTypeAssemblyQualifiedName"] = assemblyQualifiedName;
+                }
             }
             if (actionDescriptor.MethodInfo != null)
             {
