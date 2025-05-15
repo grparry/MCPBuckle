@@ -180,7 +180,8 @@ namespace MCPBuckle.Services
             {
                 Name = toolName,
                 Description = description ?? $"{httpMethod} {routeTemplate}",
-                InputSchema = CreateInputSchema(actionDescriptor)
+                InputSchema = CreateInputSchema(actionDescriptor),
+                OutputSchema = CreateOutputSchema(actionDescriptor)
             };
 
             // Populate annotations with handler and method info
@@ -216,11 +217,22 @@ namespace MCPBuckle.Services
                      !p.ParameterType.IsArray &&
                      !typeof(System.Collections.IEnumerable).IsAssignableFrom(p.ParameterType)));
 
-            // If we have a body parameter that's a complex type, use its schema directly
+            // If we have a body parameter that's a complex type, preserve its parameter name
             if (bodyParameter != null && bodyParameter.ParameterType.IsClass && bodyParameter.ParameterType != typeof(string))
             {
-                // For a complex type bound from body, return its schema directly without nesting
-                return _typeSchemaGenerator.GenerateSchema(bodyParameter.ParameterType);
+                // IMPORTANT FIX: Instead of returning the schema directly, preserve the parameter name
+                // This ensures MCPInvoke can correctly bind parameters when executing the method
+                var paramProperties = new Dictionary<string, McpSchema>
+                {
+                    [bodyParameter.Name] = _typeSchemaGenerator.GenerateSchema(bodyParameter.ParameterType)
+                };
+                
+                return new McpSchema
+                {
+                    Type = "object",
+                    Properties = paramProperties,
+                    Required = new List<string> { bodyParameter.Name }
+                };
             }
 
             // Otherwise, process all parameters normally
@@ -256,6 +268,79 @@ namespace MCPBuckle.Services
                 Properties = properties,
                 Required = required
             };
+        }
+
+        private McpSchema CreateOutputSchema(ControllerActionDescriptor actionDescriptor)
+        {
+            var methodInfo = actionDescriptor.MethodInfo;
+            if (methodInfo == null)
+            {
+                // If we can't get the method info, return a generic schema
+                return new McpSchema { Type = "object" };
+            }
+
+            // Get the return type of the method
+            var returnType = methodInfo.ReturnType;
+
+            // Handle async methods (Task<T>)
+            if (returnType.IsGenericType && (returnType.GetGenericTypeDefinition() == typeof(Task<>) ||
+                                            returnType.Name.StartsWith("ValueTask`")))
+            {
+                returnType = returnType.GetGenericArguments()[0];
+            }
+            // Handle non-generic Task which returns void
+            else if (returnType == typeof(Task) || returnType.Name == "ValueTask")
+            {
+                return new McpSchema { Type = "null" };
+            }
+
+            // Handle common ASP.NET Core types
+            if (returnType.IsGenericType && returnType.GetGenericTypeDefinition().Name.StartsWith("ActionResult`"))
+            {
+                // ActionResult<T>, extract T
+                returnType = returnType.GetGenericArguments()[0];
+            }
+            else if (typeof(IActionResult).IsAssignableFrom(returnType))
+            {
+                // For generic IActionResult, we can't determine the exact type at compile time
+                // We'll return a generic object schema
+                return new McpSchema { Type = "object" };
+            }
+            else if (returnType == typeof(void))
+            {
+                return new McpSchema { Type = "null" };
+            }
+
+            // Check if the return type is a collection or array
+            bool isCollection = returnType.IsArray || 
+                               (returnType.IsGenericType && 
+                                typeof(System.Collections.IEnumerable).IsAssignableFrom(returnType) && 
+                                returnType != typeof(string));
+
+            if (isCollection)
+            {
+                // For collections and arrays, create an array schema
+                Type itemType;
+                if (returnType.IsArray)
+                {
+                    itemType = returnType.GetElementType();
+                }
+                else
+                {
+                    // Try to get the generic argument (T in IEnumerable<T>)
+                    var genericArgs = returnType.GetGenericArguments();
+                    itemType = genericArgs.Length > 0 ? genericArgs[0] : typeof(object);
+                }
+
+                return new McpSchema
+                {
+                    Type = "array",
+                    Items = _typeSchemaGenerator.GenerateSchema(itemType)
+                };
+            }
+            
+            // For all other types, use the type schema generator
+            return _typeSchemaGenerator.GenerateSchema(returnType);
         }
     }
 }

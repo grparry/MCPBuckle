@@ -19,6 +19,22 @@ MCPBuckle is designed to be a **complementary tool** to Swashbuckle, not a repla
 - Support for required fields, enums, arrays, and nested objects
 - Customizable tool naming and metadata
 
+## What's New in 1.5.0
+
+### Enhanced Schema Generation
+- Added support for outputSchema generation to expose the return type of API endpoints
+- Improved enum handling with support for both string and integer-based enums
+- Added proper enum value lists to schema definitions
+
+### Parameter Binding Improvements
+- Fixed parameter binding for complex types to ensure better compatibility with MCPInvoke
+- Preserved parameter names for body parameters to ensure correct binding
+
+### Type Discovery and Reflection
+- Enhanced output type discovery with support for Task<T>, ValueTask<T>, and ActionResult<T>
+- Added collection type detection and proper schema generation for array responses
+- Improved null/void return type handling
+
 ## What's New in 1.4.0
 
 ### MCP Specification Compliance Improvements

@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <Version>1.4.0</Version>
+    <Version>1.5.0</Version>
     <Authors>MCPBuckle Contributors</Authors>
     <Company>MCPBuckle</Company>
     <Description>MCPBuckle is a lightweight .NET library that generates compliant Model Context Protocol (MCP) JSON from ASP.NET Core API metadata. It provides granular control over exposed endpoints, supports proper MCP info section, and allows selective tool discovery to prevent overwhelming AI agents. Works alongside Swashbuckle to enable AI agent discovery of your APIs.</Description>

@@ -27,6 +27,12 @@ namespace MCPBuckle.Models
         public McpSchema InputSchema { get; set; } = new McpSchema();
 
         /// <summary>
+        /// Gets or sets the output schema for the tool. This defines the structure of the response that the tool returns.
+        /// </summary>
+        [JsonPropertyName("outputSchema")]
+        public McpSchema OutputSchema { get; set; } = new McpSchema();
+
+        /// <summary>
         /// Gets or sets additional annotations for the tool. This can include metadata from the original OpenAPI spec.
         /// </summary>
         [JsonPropertyName("annotations")]

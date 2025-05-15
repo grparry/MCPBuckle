@@ -43,6 +43,12 @@ namespace MCPBuckle.Models
         /// </summary>
         [JsonPropertyName("format")]
         public string? Format { get; set; }
+        
+        /// <summary>
+        /// Gets or sets the enum values for enum types.
+        /// </summary>
+        [JsonPropertyName("enum")]
+        public List<object>? Enum { get; set; }
 
         /// <summary>
         /// Gets or sets additional properties for the schema.

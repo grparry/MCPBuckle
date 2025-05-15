@@ -46,6 +46,12 @@ namespace MCPBuckle.Services
                 return cachedSchema;
             }
 
+            // Special handling for enum types
+            if (type.IsEnum)
+            {
+                return GenerateEnumSchema(type);
+            }
+
             // Handle nullable types
             if (Nullable.GetUnderlyingType(type) is Type underlyingType)
             {
@@ -185,6 +191,51 @@ namespace MCPBuckle.Services
             return typeof(object);
         }
 
+        /// <summary>
+        /// Generate schema specifically for enum types, with special handling for JsonStringEnumConverter.
+        /// </summary>
+        /// <param name="enumType">The enum type to generate schema for</param>
+        /// <returns>An MCP schema for the enum type</returns>
+        private McpSchema GenerateEnumSchema(Type enumType)
+        {
+            // Check if this enum uses JsonStringEnumConverter
+            bool usesStringEnum = enumType.GetCustomAttributes(true)
+                .Any(attr => attr.GetType().Name.Contains("JsonStringEnumConverter"));
+                
+            // Create schema
+            var schema = new McpSchema
+            {
+                // Enums with JsonStringEnumConverter are strings, otherwise we treat them as integers
+                Type = usesStringEnum ? "string" : "integer",
+                Properties = new Dictionary<string, McpSchema>(),
+                Required = new List<string>()
+            };
+            
+            // Add enum values to schema
+            if (usesStringEnum)
+            {
+                var enumValues = Enum.GetNames(enumType);
+                schema.Enum = enumValues.Cast<object>().ToList();
+            }
+            else
+            {
+                var enumValues = Enum.GetValues(enumType);
+                schema.Enum = enumValues.Cast<int>().Cast<object>().ToList();
+            }
+            
+            // Get enum description if available
+            var descriptionAttribute = enumType.GetCustomAttribute<DescriptionAttribute>();
+            if (descriptionAttribute != null)
+            {
+                schema.Description = descriptionAttribute.Description;
+            }
+            
+            // Cache the schema
+            _schemaCache[enumType] = schema;
+            
+            return schema;
+        }
+        
         private string? GetPropertyDescription(Type type, PropertyInfo property)
         {
             // Try to get description from XML documentation
