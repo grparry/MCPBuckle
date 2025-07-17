@@ -19,6 +19,20 @@ MCPBuckle is designed to be a **complementary tool** to Swashbuckle, not a repla
 - Support for required fields, enums, arrays, and nested objects
 - Customizable tool naming and metadata
 
+## What's New in 1.5.1
+
+### Bug Fixes and Improvements
+- Fixed AmbiguousMatchException in XmlDocumentationService when retrieving overloaded methods
+- Fixed enum schema generation to properly handle JsonStringEnumConverter
+- Fixed dictionary type detection to prevent misidentification as arrays
+- Added circular reference detection in TypeSchemaGenerator to prevent stack overflow
+- Updated default values for better consistency (Description now defaults to empty string)
+
+### Testing Enhancements
+- Added comprehensive unit test suite covering all core functionality
+- Added integration tests using TestServer for testing MCP endpoint behavior
+- Added specific tests for circular reference handling in schema generation
+
 ## What's New in 1.5.0
 
 ### Enhanced Schema Generation

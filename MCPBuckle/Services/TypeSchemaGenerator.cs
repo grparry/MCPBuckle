@@ -19,6 +19,7 @@ namespace MCPBuckle.Services
         private readonly XmlDocumentationService _xmlDocumentationService;
         private readonly McpBuckleOptions _options;
         private readonly Dictionary<Type, McpSchema> _schemaCache = new Dictionary<Type, McpSchema>();
+        private readonly HashSet<Type> _typesBeingProcessed = new HashSet<Type>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="TypeSchemaGenerator"/> class.
@@ -38,7 +39,7 @@ namespace MCPBuckle.Services
         /// </summary>
         /// <param name="type">The type to generate a schema for.</param>
         /// <returns>The generated MCP schema.</returns>
-        public McpSchema GenerateSchema(Type type)
+        public virtual McpSchema GenerateSchema(Type type)
         {
             // Return from cache if available
             if (_schemaCache.TryGetValue(type, out var cachedSchema))
@@ -46,17 +47,39 @@ namespace MCPBuckle.Services
                 return cachedSchema;
             }
 
-            // Special handling for enum types
-            if (type.IsEnum)
+            // Check for circular reference
+            if (_typesBeingProcessed.Contains(type))
             {
-                return GenerateEnumSchema(type);
+                // Create a placeholder schema for circular references
+                var circularRefSchema = new McpSchema
+                {
+                    Type = "object",
+                    Description = $"Circular reference to {type.Name}",
+                    Properties = new Dictionary<string, McpSchema>(),
+                    Required = new List<string>()
+                };
+                
+                // Cache the placeholder immediately to break the cycle
+                _schemaCache[type] = circularRefSchema;
+                return circularRefSchema;
             }
 
-            // Handle nullable types
-            if (Nullable.GetUnderlyingType(type) is Type underlyingType)
+            // Mark this type as being processed
+            _typesBeingProcessed.Add(type);
+
+            try
             {
-                return GenerateSchema(underlyingType);
-            }
+                // Special handling for enum types
+                if (type.IsEnum)
+                {
+                    return GenerateEnumSchema(type);
+                }
+
+                // Handle nullable types
+                if (Nullable.GetUnderlyingType(type) is Type underlyingType)
+                {
+                    return GenerateSchema(underlyingType);
+                }
 
             // Generate schema based on type
             var schema = new McpSchema
@@ -74,11 +97,18 @@ namespace MCPBuckle.Services
                     schema.Format = formatAttribute.DataFormatString;
                 }
             }
-            else if (type.IsEnum)
+            // This code is unreachable - enums are handled above with return statement
+            // else if (type.IsEnum)
+            // {
+            //     // Handle enums
+            //     schema.Type = "string";
+            //     schema.AdditionalProperties["enum"] = Enum.GetNames(type);
+            // }
+            else if (IsDictionaryType(type))
             {
-                // Handle enums
-                schema.Type = "string";
-                schema.AdditionalProperties["enum"] = Enum.GetNames(type);
+                // Handle dictionaries - must check before IsArrayType since Dictionary implements IEnumerable
+                schema.Type = "object";
+                schema.AdditionalProperties["additionalProperties"] = true;
             }
             else if (IsArrayType(type))
             {
@@ -86,12 +116,6 @@ namespace MCPBuckle.Services
                 schema.Type = "array";
                 var elementType = GetElementType(type);
                 schema.Items = GenerateSchema(elementType);
-            }
-            else if (IsDictionaryType(type))
-            {
-                // Handle dictionaries
-                schema.Type = "object";
-                schema.AdditionalProperties["additionalProperties"] = true;
             }
             else if (type.IsClass && type != typeof(string))
             {
@@ -133,10 +157,16 @@ namespace MCPBuckle.Services
                 }
             }
 
-            // Cache the schema
-            _schemaCache[type] = schema;
+                // Cache the schema
+                _schemaCache[type] = schema;
 
-            return schema;
+                return schema;
+            }
+            finally
+            {
+                // Remove from processing set when done
+                _typesBeingProcessed.Remove(type);
+            }
         }
 
         private string GetJsonSchemaType(Type type)
@@ -230,7 +260,7 @@ namespace MCPBuckle.Services
                 schema.Description = descriptionAttribute.Description;
             }
             
-            // Cache the schema
+            // Cache the schema (enum schemas don't have circular reference issues)
             _schemaCache[enumType] = schema;
             
             return schema;

@@ -22,9 +22,9 @@ namespace MCPBuckle.Configuration
         /// <remarks>
         /// If true, tool names will be in the format "{ControllerName}_{ActionName}".
         /// If false, tool names will be just the action name.
-        /// Default value is true.
+        /// Default value is false.
         /// </remarks>
-        public bool IncludeControllerNameInToolName { get; set; } = true;
+        public bool IncludeControllerNameInToolName { get; set; } = false;
 
         /// <summary>
         /// Gets or sets a list of controller names to include. If null or empty, all controllers are included.
@@ -57,7 +57,7 @@ namespace MCPBuckle.Configuration
         /// <remarks>
         /// This is required by the MCP specification.
         /// </remarks>
-        public string SchemaVersion { get; set; } = string.Empty;
+        public string SchemaVersion { get; set; } = "1.0.0";
 
         /// <summary>
         /// Gets or sets the title of the MCP server for the info section.
@@ -65,12 +65,12 @@ namespace MCPBuckle.Configuration
         /// <remarks>
         /// This is required by the MCP specification.
         /// </remarks>
-        public string ServerTitle { get; set; } = string.Empty;
+        public string ServerTitle { get; set; } = "API Documentation";
 
         /// <summary>
         /// Gets or sets the description of the MCP server for the info section.
         /// </summary>
-        public string? ServerDescription { get; set; }
+        public string? ServerDescription { get; set; } = "Generated API documentation";
 
         /// <summary>
         /// Gets or sets a value indicating whether to include XML documentation.
