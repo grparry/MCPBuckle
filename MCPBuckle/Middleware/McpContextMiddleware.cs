@@ -87,6 +87,39 @@ namespace MCPBuckle.Middleware
                 }
             }
 
+            // Check if the request is for the discovery tools endpoint (MCPInvoke compatibility)
+            if (context.Request.Path.Equals("/api/discovery/tools", StringComparison.OrdinalIgnoreCase))
+            {
+                _logger.LogInformation("Serving MCP tools discovery at /api/discovery/tools");
+
+                try
+                {
+                    // Generate the MCP context and extract the tools
+                    var mcpContext = contextGenerator.GenerateContext();
+                    
+                    // Return just the tools array for MCPInvoke compatibility
+                    var toolsResponse = new { tools = mcpContext.Tools };
+
+                    // Set the content type
+                    context.Response.ContentType = "application/json";
+
+                    // Serialize the tools response to JSON
+                    await JsonSerializer.SerializeAsync(
+                        context.Response.Body,
+                        toolsResponse,
+                        _jsonOptions);
+
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error serving MCP tools discovery");
+                    context.Response.StatusCode = 500;
+                    await context.Response.WriteAsync("Error generating MCP tools discovery");
+                    return;
+                }
+            }
+
             // Continue with the next middleware
             await _next(context);
         }

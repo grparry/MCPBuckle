@@ -51,6 +51,24 @@ namespace MCPBuckle.Models
         public List<object>? Enum { get; set; }
 
         /// <summary>
+        /// Gets or sets annotations for the schema. Used for parameter source information and detailed properties.
+        /// </summary>
+        [JsonPropertyName("annotations")]
+        public Dictionary<string, object>? Annotations { get; set; }
+
+        /// <summary>
+        /// Gets or sets the parameter source (route, body, query, header) for MCPInvoke 1.4.0+ compatibility.
+        /// </summary>
+        [JsonIgnore]
+        public string? Source { get; set; }
+
+        /// <summary>
+        /// Gets or sets whether this parameter is required.
+        /// </summary>
+        [JsonIgnore]
+        public bool IsRequired { get; set; }
+
+        /// <summary>
         /// Gets or sets additional properties for the schema.
         /// </summary>
         [JsonExtensionData]

@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.Extensions.Logging;
@@ -206,60 +208,109 @@ namespace MCPBuckle.Services
             var properties = new Dictionary<string, McpSchema>();
             var required = new List<string>();
 
-            // Check if there's a single complex type parameter that would be bound from the body
-            var bodyParameter = actionDescriptor.Parameters
-                .FirstOrDefault(p => 
-                    // Check for [FromBody] attribute
-                    p.BindingInfo?.BindingSource?.Id == "Body" ||
-                    // Or check if it's a complex type (class) that would be implicitly bound from body
-                    (p.ParameterType.IsClass && 
-                     p.ParameterType != typeof(string) && 
-                     !p.ParameterType.IsArray &&
-                     !typeof(System.Collections.IEnumerable).IsAssignableFrom(p.ParameterType)));
-
-            // If we have a body parameter that's a complex type, preserve its parameter name
-            if (bodyParameter != null && bodyParameter.ParameterType.IsClass && bodyParameter.ParameterType != typeof(string))
+            try
             {
-                // IMPORTANT FIX: Instead of returning the schema directly, preserve the parameter name
-                // This ensures MCPInvoke can correctly bind parameters when executing the method
-                var paramProperties = new Dictionary<string, McpSchema>
+                // 1. First extract route parameters from the route template (MCPInvoke 1.4.0+ compatibility)
+                var routeParams = ExtractRouteParameters(actionDescriptor);
+                foreach (var routeParam in routeParams)
                 {
-                    [bodyParameter.Name] = _typeSchemaGenerator.GenerateSchema(bodyParameter.ParameterType)
-                };
-                
-                return new McpSchema
-                {
-                    Type = "object",
-                    Properties = paramProperties,
-                    Required = new List<string> { bodyParameter.Name }
-                };
-            }
-
-            // Otherwise, process all parameters normally
-            foreach (var parameter in actionDescriptor.Parameters)
-            {
-                // Generate schema for parameter type
-                var paramSchema = _typeSchemaGenerator.GenerateSchema(parameter.ParameterType);
-
-                // Add parameter documentation if available
-                if (_options.IncludeXmlDocumentation)
-                {
-                    var paramDescription = _xmlDocumentationService.GetParameterDocumentation(
-                        actionDescriptor.ControllerTypeInfo,
-                        actionDescriptor.MethodInfo,
-                        parameter.Name);
-
-                    if (!string.IsNullOrEmpty(paramDescription))
+                    var routeSchema = new McpSchema
                     {
-                        paramSchema.Description = paramDescription;
-                    }
+                        Type = MapDotNetTypeToJsonSchemaType(routeParam.Value),
+                        Description = $"Route parameter {routeParam.Key}",
+                        Source = "route",
+                        IsRequired = true,
+                        Annotations = new Dictionary<string, object>
+                        {
+                            ["source"] = "route"
+                        }
+                    };
+                    
+                    properties[routeParam.Key] = routeSchema;
+                    required.Add(routeParam.Key);
                 }
 
-                properties[parameter.Name] = paramSchema;
+                // 2. Process method parameters
+                foreach (var parameter in actionDescriptor.Parameters)
+                {
+                    // Skip if already handled as route parameter
+                    if (routeParams.ContainsKey(parameter.Name))
+                        continue;
 
-                // For simplicity in the MVP, mark all parameters as required
-                // In a future version, we can add more sophisticated required field detection
-                required.Add(parameter.Name);
+                    // Skip ASP.NET Core infrastructure types
+                    if (IsAspNetCoreInfrastructureType(parameter.ParameterType))
+                        continue;
+
+                    McpSchema paramSchema;
+
+                    if (IsComplexType(parameter.ParameterType))
+                    {
+                        // Generate detailed schema for complex objects (MCPInvoke 1.4.0+ compatibility)
+                        paramSchema = GenerateComplexObjectSchema(parameter.ParameterType, parameter.Name);
+                    }
+                    else
+                    {
+                        // Handle primitive types, arrays, and enums
+                        paramSchema = new McpSchema
+                        {
+                            Type = MapDotNetTypeToJsonSchemaType(parameter.ParameterType),
+                            Description = GetParameterDescription(actionDescriptor, parameter),
+                            IsRequired = true // Default to required, will be adjusted based on parameter info
+                        };
+
+                        // Handle array types
+                        if (IsArrayType(parameter.ParameterType))
+                        {
+                            var elementType = GetElementType(parameter.ParameterType);
+                            paramSchema.Items = new McpSchema
+                            {
+                                Type = MapDotNetTypeToJsonSchemaType(elementType),
+                                Description = $"Array item of type {elementType.Name}"
+                            };
+
+                            // Also populate annotations for backward compatibility
+                            paramSchema.Annotations = new Dictionary<string, object>
+                            {
+                                ["items"] = new Dictionary<string, object>
+                                {
+                                    ["type"] = MapDotNetTypeToJsonSchemaType(elementType)
+                                }
+                            };
+                        }
+                        // Handle enum types
+                        else if (parameter.ParameterType.IsEnum)
+                        {
+                            var enumValues = System.Enum.GetNames(parameter.ParameterType).Cast<object>().ToList();
+                            paramSchema.Enum = enumValues;
+                            paramSchema.Annotations = new Dictionary<string, object>
+                            {
+                                ["enum"] = enumValues
+                            };
+                        }
+                    }
+
+                    // Detect parameter source (MCPInvoke 1.4.0+ compatibility)
+                    var parameterSource = DetectParameterSource(parameter, actionDescriptor);
+                    if (!string.IsNullOrEmpty(parameterSource))
+                    {
+                        paramSchema.Source = parameterSource;
+                        paramSchema.Annotations ??= new Dictionary<string, object>();
+                        paramSchema.Annotations["source"] = parameterSource;
+                    }
+
+                    properties[parameter.Name] = paramSchema;
+                    if (paramSchema.IsRequired)
+                    {
+                        required.Add(parameter.Name);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error generating input schema for action {ControllerName}.{ActionName}", 
+                    actionDescriptor.ControllerName, actionDescriptor.ActionName);
+                // Fall back to basic schema generation
+                return CreateBasicInputSchema(actionDescriptor);
             }
 
             return new McpSchema
@@ -323,7 +374,7 @@ namespace MCPBuckle.Services
                 Type itemType;
                 if (returnType.IsArray)
                 {
-                    itemType = returnType.GetElementType();
+                    itemType = returnType.GetElementType() ?? typeof(object);
                 }
                 else
                 {
@@ -342,5 +393,365 @@ namespace MCPBuckle.Services
             // For all other types, use the type schema generator
             return _typeSchemaGenerator.GenerateSchema(returnType);
         }
+
+        #region MCPInvoke 1.4.0+ Compatibility Methods
+
+        /// <summary>
+        /// Extracts route parameters from the action descriptor's route template.
+        /// </summary>
+        private Dictionary<string, Type> ExtractRouteParameters(ControllerActionDescriptor actionDescriptor)
+        {
+            var routeParams = new Dictionary<string, Type>();
+            var routeTemplate = actionDescriptor.AttributeRouteInfo?.Template;
+            
+            if (string.IsNullOrEmpty(routeTemplate))
+                return routeParams;
+
+            // Parse route template for parameters like {id}, {tenantId:int}, etc.
+            var matches = System.Text.RegularExpressions.Regex.Matches(routeTemplate, @"\{([^}:]+)(?::[^}]+)?\}");
+            
+            foreach (System.Text.RegularExpressions.Match match in matches)
+            {
+                var paramName = match.Groups[1].Value;
+                
+                // Try to find corresponding method parameter to get actual type
+                var methodParam = actionDescriptor.Parameters.FirstOrDefault(p => 
+                    string.Equals(p.Name, paramName, StringComparison.OrdinalIgnoreCase));
+                
+                if (methodParam != null)
+                {
+                    routeParams[paramName] = methodParam.ParameterType;
+                }
+                else
+                {
+                    // Default to string if we can't determine the type
+                    routeParams[paramName] = typeof(string);
+                }
+            }
+            
+            return routeParams;
+        }
+
+        /// <summary>
+        /// Maps .NET types to JSON Schema types.
+        /// </summary>
+        private static string MapDotNetTypeToJsonSchemaType(Type type)
+        {
+            if (type == typeof(string)) return "string";
+            if (type == typeof(int) || type == typeof(long) || type == typeof(short) || 
+                type == typeof(uint) || type == typeof(ulong) || type == typeof(ushort)) return "integer";
+            if (type == typeof(float) || type == typeof(double) || type == typeof(decimal)) return "number";
+            if (type == typeof(bool)) return "boolean";
+            if (type == typeof(DateTime) || type == typeof(DateTimeOffset)) return "string";
+            if (type == typeof(Guid)) return "string";
+            if (type.IsEnum) return "string";
+            if (type.IsArray || typeof(System.Collections.IEnumerable).IsAssignableFrom(type)) return "array";
+            if (type.IsClass || type.IsValueType) return "object";
+            
+            return "string"; // fallback
+        }
+
+        /// <summary>
+        /// Detects the parameter source (route, body, query, header) for a given parameter.
+        /// </summary>
+        private static string DetectParameterSource(dynamic parameter, ControllerActionDescriptor actionDescriptor)
+        {
+            // Check binding source from parameter attributes
+            if (parameter.BindingInfo?.BindingSource != null)
+            {
+                var source = parameter.BindingInfo.BindingSource.Id?.ToLowerInvariant();
+                switch (source)
+                {
+                    case "body": return "body";
+                    case "query": return "query";
+                    case "header": return "header";
+                    case "route": return "route";
+                    case "path": return "route";
+                }
+            }
+
+            // Check if it's a route parameter by looking at the route template
+            var routeTemplate = actionDescriptor.AttributeRouteInfo?.Template ?? string.Empty;
+            if (routeTemplate.Contains($"{{{parameter.Name}}}") || 
+                routeTemplate.Contains($"{{{parameter.Name}:"))
+            {
+                return "route";
+            }
+
+            // Complex types typically come from body
+            if (IsComplexType(parameter.ParameterType))
+            {
+                return "body";
+            }
+
+            // Primitive types typically come from query
+            return "query";
+        }
+
+        /// <summary>
+        /// Determines if a type is a complex object type.
+        /// </summary>
+        private static bool IsComplexType(Type type)
+        {
+            return type.IsClass && 
+                   type != typeof(string) && 
+                   type != typeof(object) && 
+                   !type.IsPrimitive && 
+                   !type.IsEnum &&
+                   !typeof(System.Collections.IEnumerable).IsAssignableFrom(type);
+        }
+
+        /// <summary>
+        /// Determines if a type is an array type.
+        /// </summary>
+        private static bool IsArrayType(Type type)
+        {
+            return type.IsArray || 
+                   (type.IsGenericType && typeof(System.Collections.IEnumerable).IsAssignableFrom(type) && type != typeof(string));
+        }
+
+        /// <summary>
+        /// Gets the element type of an array or collection.
+        /// </summary>
+        private static Type GetElementType(Type type)
+        {
+            if (type.IsArray)
+                return type.GetElementType() ?? typeof(object);
+            
+            if (type.IsGenericType)
+            {
+                var args = type.GetGenericArguments();
+                return args.Length > 0 ? args[0] : typeof(object);
+            }
+            
+            return typeof(object);
+        }
+
+        /// <summary>
+        /// Determines if a type is an ASP.NET Core infrastructure type that should be skipped.
+        /// </summary>
+        private static bool IsAspNetCoreInfrastructureType(Type type)
+        {
+            return type == typeof(HttpContext) ||
+                   type == typeof(HttpRequest) ||
+                   type == typeof(HttpResponse) ||
+                   type == typeof(System.Threading.CancellationToken) ||
+                   type.Namespace?.StartsWith("Microsoft.AspNetCore") == true;
+        }
+
+        /// <summary>
+        /// Generates a complex object schema with detailed property information.
+        /// </summary>
+        private McpSchema GenerateComplexObjectSchema(Type objectType, string paramName)
+        {
+            var objectProperties = GenerateObjectProperties(objectType);
+            var requiredProps = GetRequiredProperties(objectType);
+            
+            var schema = new McpSchema
+            {
+                Type = "object",
+                Description = $"Complex object of type {objectType.Name}",
+                IsRequired = true,
+                Properties = ConvertObjectPropertiesToMcpSchemas(objectProperties),
+                Required = requiredProps,
+                Annotations = new Dictionary<string, object>
+                {
+                    ["properties"] = objectProperties,
+                    ["required"] = requiredProps
+                }
+            };
+            
+            return schema;
+        }
+
+        /// <summary>
+        /// Generates properties for a complex object type.
+        /// </summary>
+        private Dictionary<string, object> GenerateObjectProperties(Type objectType)
+        {
+            var properties = new Dictionary<string, object>();
+            var objectProperties = objectType.GetProperties(BindingFlags.Public | BindingFlags.Instance);
+            
+            foreach (var prop in objectProperties)
+            {
+                var propType = MapDotNetTypeToJsonSchemaType(prop.PropertyType);
+                var propInfo = new Dictionary<string, object>
+                {
+                    ["type"] = propType,
+                    ["description"] = prop.Name
+                };
+
+                // Handle nested objects
+                if (IsComplexType(prop.PropertyType))
+                {
+                    propInfo["properties"] = GenerateObjectProperties(prop.PropertyType);
+                }
+                // Handle arrays
+                else if (IsArrayType(prop.PropertyType))
+                {
+                    var elementType = GetElementType(prop.PropertyType);
+                    propInfo["items"] = new Dictionary<string, object>
+                    {
+                        ["type"] = MapDotNetTypeToJsonSchemaType(elementType)
+                    };
+                }
+                // Handle enums
+                else if (prop.PropertyType.IsEnum)
+                {
+                    propInfo["enum"] = System.Enum.GetNames(prop.PropertyType);
+                }
+
+                properties[prop.Name] = propInfo;
+            }
+            
+            return properties;
+        }
+
+        /// <summary>
+        /// Gets the required properties for a complex object type.
+        /// </summary>
+        private List<string> GetRequiredProperties(Type objectType)
+        {
+            var required = new List<string>();
+            var properties = objectType.GetProperties(BindingFlags.Public | BindingFlags.Instance);
+            
+            foreach (var prop in properties)
+            {
+                // Check for Required attribute
+                if (prop.GetCustomAttribute<System.ComponentModel.DataAnnotations.RequiredAttribute>() != null)
+                {
+                    required.Add(prop.Name);
+                }
+                // Non-nullable value types are typically required
+                else if (prop.PropertyType.IsValueType && Nullable.GetUnderlyingType(prop.PropertyType) == null)
+                {
+                    required.Add(prop.Name);
+                }
+            }
+            
+            return required;
+        }
+
+        /// <summary>
+        /// Converts object properties dictionary to McpSchema dictionary.
+        /// </summary>
+        private Dictionary<string, McpSchema> ConvertObjectPropertiesToMcpSchemas(Dictionary<string, object> objectProperties)
+        {
+            var mcpProperties = new Dictionary<string, McpSchema>();
+            
+            foreach (var prop in objectProperties)
+            {
+                if (prop.Value is Dictionary<string, object> propDef)
+                {
+                    var mcpParam = new McpSchema
+                    {
+                        Type = propDef.TryGetValue("type", out var typeObj) ? typeObj?.ToString() ?? "string" : "string",
+                        Description = propDef.TryGetValue("description", out var descObj) ? descObj?.ToString() ?? "" : ""
+                    };
+                    
+                    // Handle nested object properties
+                    if (mcpParam.Type == "object" && propDef.TryGetValue("properties", out var nestedPropsObj) 
+                        && nestedPropsObj is Dictionary<string, object> nestedProps)
+                    {
+                        mcpParam.Properties = ConvertObjectPropertiesToMcpSchemas(nestedProps);
+                    }
+                    
+                    // Handle array items
+                    if (mcpParam.Type == "array" && propDef.TryGetValue("items", out var itemsObj))
+                    {
+                        if (itemsObj is Dictionary<string, object> itemsDef)
+                        {
+                            mcpParam.Items = new McpSchema
+                            {
+                                Type = itemsDef.TryGetValue("type", out var itemTypeObj) ? itemTypeObj?.ToString() ?? "string" : "string"
+                            };
+                        }
+                    }
+                    
+                    // Handle enum values
+                    if (propDef.TryGetValue("enum", out var enumObj) && enumObj is string[] enumValues)
+                    {
+                        mcpParam.Enum = enumValues.Cast<object>().ToList();
+                    }
+                    
+                    mcpProperties[prop.Key] = mcpParam;
+                }
+            }
+            
+            return mcpProperties;
+        }
+
+        /// <summary>
+        /// Gets parameter description from XML documentation or attributes.
+        /// </summary>
+        private string GetParameterDescription(ControllerActionDescriptor actionDescriptor, dynamic parameter)
+        {
+            // Try XML documentation first
+            if (_options.IncludeXmlDocumentation)
+            {
+                var xmlDesc = _xmlDocumentationService.GetParameterDocumentation(
+                    actionDescriptor.ControllerTypeInfo,
+                    actionDescriptor.MethodInfo,
+                    parameter.Name);
+                
+                if (!string.IsNullOrEmpty(xmlDesc))
+                    return xmlDesc;
+            }
+
+            // Try to get parameter info if available
+            try
+            {
+                var paramInfo = actionDescriptor.MethodInfo?.GetParameters().FirstOrDefault(p => p.Name == parameter.Name);
+                if (paramInfo != null)
+                {
+                    // Try DisplayName attribute
+                    var displayNameAttr = paramInfo.GetCustomAttribute<System.ComponentModel.DisplayNameAttribute>();
+                    if (displayNameAttr != null)
+                        return displayNameAttr.DisplayName;
+
+                    // Try Description attribute  
+                    var descriptionAttr = paramInfo.GetCustomAttribute<System.ComponentModel.DescriptionAttribute>();
+                    if (descriptionAttr != null)
+                        return descriptionAttr.Description;
+                }
+            }
+            catch
+            {
+                // Ignore errors getting parameter info
+            }
+
+            // Default description
+            return $"Parameter of type {parameter.ParameterType.Name}";
+        }
+
+        /// <summary>
+        /// Creates a basic input schema as fallback when enhanced schema generation fails.
+        /// </summary>
+        private McpSchema CreateBasicInputSchema(ControllerActionDescriptor actionDescriptor)
+        {
+            var properties = new Dictionary<string, McpSchema>();
+            var required = new List<string>();
+
+            foreach (var parameter in actionDescriptor.Parameters)
+            {
+                var paramSchema = _typeSchemaGenerator.GenerateSchema(parameter.ParameterType);
+                properties[parameter.Name] = paramSchema;
+                
+                // Mark as required by default - more sophisticated logic could be added later
+                // if (!parameter.IsOptional)
+                {
+                    required.Add(parameter.Name);
+                }
+            }
+
+            return new McpSchema
+            {
+                Type = "object",
+                Properties = properties,
+                Required = required
+            };
+        }
+
+        #endregion
     }
 }
