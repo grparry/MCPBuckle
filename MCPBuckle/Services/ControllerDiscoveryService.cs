@@ -569,7 +569,24 @@ namespace MCPBuckle.Services
         /// </summary>
         private Dictionary<string, object> GenerateObjectProperties(Type objectType)
         {
+            return GenerateObjectProperties(objectType, new HashSet<Type>());
+        }
+
+        private Dictionary<string, object> GenerateObjectProperties(Type objectType, HashSet<Type> processedTypes)
+        {
             var properties = new Dictionary<string, object>();
+            
+            // Prevent circular references
+            if (processedTypes.Contains(objectType))
+            {
+                return new Dictionary<string, object>
+                {
+                    ["type"] = "object",
+                    ["description"] = $"Circular reference to {objectType.Name}"
+                };
+            }
+
+            processedTypes.Add(objectType);
             var objectProperties = objectType.GetProperties(BindingFlags.Public | BindingFlags.Instance);
             
             foreach (var prop in objectProperties)
@@ -584,16 +601,24 @@ namespace MCPBuckle.Services
                 // Handle nested objects
                 if (IsComplexType(prop.PropertyType))
                 {
-                    propInfo["properties"] = GenerateObjectProperties(prop.PropertyType);
+                    propInfo["properties"] = GenerateObjectProperties(prop.PropertyType, new HashSet<Type>(processedTypes));
                 }
                 // Handle arrays
                 else if (IsArrayType(prop.PropertyType))
                 {
                     var elementType = GetElementType(prop.PropertyType);
-                    propInfo["items"] = new Dictionary<string, object>
+                    var itemInfo = new Dictionary<string, object>
                     {
                         ["type"] = MapDotNetTypeToJsonSchemaType(elementType)
                     };
+                    
+                    // Handle complex element types
+                    if (IsComplexType(elementType))
+                    {
+                        itemInfo["properties"] = GenerateObjectProperties(elementType, new HashSet<Type>(processedTypes));
+                    }
+                    
+                    propInfo["items"] = itemInfo;
                 }
                 // Handle enums
                 else if (prop.PropertyType.IsEnum)
