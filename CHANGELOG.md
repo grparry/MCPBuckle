@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2025-01-11
+
+### 🚀 Major Fixes for Complex Parameter Handling
+
+- **Critical Fix: [FromQuery] Complex Object Detection** - Resolved issue where complex objects with `[FromQuery]` attribute were incorrectly classified as "body" parameters
+  - Enhanced `DetectParameterSource()` method in `ControllerDiscoveryService` to explicitly check for `[FromQuery]` attribute
+  - Complex objects with `[FromQuery]` are now properly classified as "query" source parameters
+  - Fixes MCP tool generation for complex query parameter objects like `PromptRequest` and `TenantPromptSettingsRequest`
+
+- **Critical Fix: Inheritance Chain Property Walking** - Resolved issue where base class properties were missing from MCP tool definitions
+  - Added comprehensive `GetInheritanceChainProperties()` method that walks the full inheritance hierarchy
+  - Updated `GenerateObjectProperties()` to use inheritance chain walking instead of immediate class properties only
+  - Base class properties (like `Provider`, `ModelName`, `PromptVersion` from `LlmProviderModelRequest`) are now properly included
+  - Fixes missing required properties in MCP tool schemas for inherited parameter types
+
+### 🔧 Enhanced Parameter Processing
+
+- **Improved Schema Generation** - Both fixes work together to provide complete parameter schemas
+  - Complex `[FromQuery]` objects now expand to show all inherited properties as individual parameters
+  - Required attribute detection works across inheritance chains
+  - Parameter source annotations are correctly applied to inherited properties
+
+### ✅ Quality Assurance
+
+- **Comprehensive Test Coverage** - Added 3 new targeted tests to validate the fixes:
+  - `DiscoverTools_WithFromQueryComplexObject_DetectsQuerySource` - Validates Level 1 fix for `[FromQuery]` detection
+  - `DiscoverTools_WithInheritedProperties_IncludesBaseClassProperties` - Validates Level 2 fix for inheritance chain walking
+  - `DiscoverTools_WithFromQueryAndInheritance_BothFixesWorkTogether` - Validates both fixes working in combination
+- **Test Models Added** - Added `BaseRequest` and `ExtendedRequest` test models that mirror real-world inheritance scenarios
+- **100% Test Pass Rate** - All existing tests continue to pass, ensuring backward compatibility
+
+### Impact
+
+These fixes specifically address MCP tool generation issues with inheritance-based parameter types commonly used in LLM prompt management systems. Before this version, MCP tools would show generic "Complex object of type PromptRequest" descriptions instead of exposing individual inherited properties. With version 1.7.0, MCP tools now correctly expose all inherited properties as separate, properly-typed parameters with correct source annotations.
+
 ## [1.6.0] - 2025-08-07
 
 ### 🚀 Major New Features

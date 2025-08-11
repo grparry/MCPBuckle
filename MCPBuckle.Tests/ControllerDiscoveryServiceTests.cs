@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Reflection;
 using Microsoft.AspNetCore.Mvc;
@@ -276,6 +277,101 @@ namespace MCPBuckle.Tests
             Assert.Equal("string", tool.OutputSchema.Type);
         }
 
+        [Fact]
+        public void DiscoverTools_WithFromQueryComplexObject_DetectsQuerySource()
+        {
+            // Arrange - This tests Level 1 fix: [FromQuery] detection for complex objects
+            var actionDescriptors = CreateTestActionDescriptorsWithFromQueryComplex();
+            _mockActionDescriptorProvider.Setup(p => p.ActionDescriptors)
+                .Returns(new ActionDescriptorCollection(actionDescriptors, 1));
+
+            var service = CreateControllerDiscoveryService();
+
+            // Act
+            var tools = service.DiscoverTools();
+
+            // Assert
+            Assert.Single(tools);
+            var tool = tools.First();
+            Assert.NotNull(tool.InputSchema);
+            Assert.NotNull(tool.InputSchema.Properties);
+            
+            // Verify that the complex object parameter is detected as query source
+            // Before the fix, this would be incorrectly classified as "body"
+            var requestParam = tool.InputSchema.Properties.FirstOrDefault(p => p.Key == "request");
+            Assert.True(requestParam.Key != null, "Request parameter should be present");
+            Assert.Equal("query", requestParam.Value.Source);
+        }
+
+        [Fact]
+        public void DiscoverTools_WithInheritedProperties_IncludesBaseClassProperties()
+        {
+            // Arrange - This tests Level 2 fix: inheritance chain walking
+            var actionDescriptors = CreateTestActionDescriptorsWithInheritedModel();
+            _mockActionDescriptorProvider.Setup(p => p.ActionDescriptors)
+                .Returns(new ActionDescriptorCollection(actionDescriptors, 1));
+
+            var service = CreateControllerDiscoveryService();
+
+            // Act
+            var tools = service.DiscoverTools();
+
+            // Assert
+            Assert.Single(tools);
+            var tool = tools.First();
+            Assert.NotNull(tool.InputSchema);
+            Assert.NotNull(tool.InputSchema.Properties);
+            
+            // Verify the main parameter exists
+            var requestParam = tool.InputSchema.Properties.FirstOrDefault(p => p.Key == "request");
+            Assert.True(requestParam.Key != null, "Request parameter should be present");
+            Assert.NotNull(requestParam.Value.Properties);
+            
+            // Verify inherited properties from BaseRequest are included
+            Assert.True(requestParam.Value.Properties.ContainsKey("Provider"), "Provider property from base class should be included");
+            Assert.True(requestParam.Value.Properties.ContainsKey("ModelName"), "ModelName property from base class should be included");
+            Assert.True(requestParam.Value.Properties.ContainsKey("PromptVersion"), "PromptVersion property from base class should be included");
+            
+            // Verify derived properties are included
+            Assert.True(requestParam.Value.Properties.ContainsKey("PromptType"), "PromptType property from derived class should be included");
+            Assert.True(requestParam.Value.Properties.ContainsKey("TenantId"), "TenantId property from derived class should be included");
+            
+            // Verify required properties include both base and derived properties
+            Assert.Contains("Provider", requestParam.Value.Required);
+            Assert.Contains("ModelName", requestParam.Value.Required);
+            Assert.Contains("PromptVersion", requestParam.Value.Required);
+            Assert.Contains("PromptType", requestParam.Value.Required);
+            Assert.Contains("TenantId", requestParam.Value.Required);
+        }
+
+        [Fact]
+        public void DiscoverTools_WithFromQueryAndInheritance_BothFixesWorkTogether()
+        {
+            // Arrange - This tests both Level 1 and Level 2 fixes working together
+            var actionDescriptors = CreateTestActionDescriptorsWithFromQueryComplex();
+            _mockActionDescriptorProvider.Setup(p => p.ActionDescriptors)
+                .Returns(new ActionDescriptorCollection(actionDescriptors, 1));
+
+            var service = CreateControllerDiscoveryService();
+
+            // Act
+            var tools = service.DiscoverTools();
+
+            // Assert
+            Assert.Single(tools);
+            var tool = tools.First();
+            
+            // Level 1 fix: Complex object should be detected as query source
+            var requestParam = tool.InputSchema.Properties.FirstOrDefault(p => p.Key == "request");
+            Assert.True(requestParam.Key != null);
+            Assert.Equal("query", requestParam.Value.Source);
+            
+            // Level 2 fix: Should include inherited properties
+            Assert.NotNull(requestParam.Value.Properties);
+            Assert.True(requestParam.Value.Properties.ContainsKey("Provider"), "Should include base class properties");
+            Assert.True(requestParam.Value.Properties.ContainsKey("PromptType"), "Should include derived class properties");
+        }
+
         private ControllerDiscoveryService CreateControllerDiscoveryService(McpBuckleOptions options = null)
         {
             options ??= _defaultOptions;
@@ -426,6 +522,64 @@ namespace MCPBuckle.Tests
                 }
             };
         }
+
+        private List<ControllerActionDescriptor> CreateTestActionDescriptorsWithFromQueryComplex()
+        {
+            var controllerType = typeof(TestController);
+            var methodInfo = controllerType.GetMethod(nameof(TestController.GetWithComplexQuery));
+            
+            return new List<ControllerActionDescriptor>
+            {
+                new ControllerActionDescriptor
+                {
+                    ControllerName = "TestController",
+                    ActionName = "GetWithComplexQuery",
+                    ControllerTypeInfo = controllerType.GetTypeInfo(),
+                    MethodInfo = methodInfo,
+                    Parameters = new List<ParameterDescriptor>
+                    {
+                        (ParameterDescriptor)new ControllerParameterDescriptor
+                        {
+                            Name = "request",
+                            ParameterType = typeof(ExtendedRequest),
+                            BindingInfo = new Microsoft.AspNetCore.Mvc.ModelBinding.BindingInfo
+                            {
+                                BindingSource = Microsoft.AspNetCore.Mvc.ModelBinding.BindingSource.Query
+                            }
+                        }
+                    }
+                }
+            };
+        }
+
+        private List<ControllerActionDescriptor> CreateTestActionDescriptorsWithInheritedModel()
+        {
+            var controllerType = typeof(TestController);
+            var methodInfo = controllerType.GetMethod(nameof(TestController.PostWithInheritedModel));
+            
+            return new List<ControllerActionDescriptor>
+            {
+                new ControllerActionDescriptor
+                {
+                    ControllerName = "TestController",
+                    ActionName = "PostWithInheritedModel",
+                    ControllerTypeInfo = controllerType.GetTypeInfo(),
+                    MethodInfo = methodInfo,
+                    Parameters = new List<ParameterDescriptor>
+                    {
+                        (ParameterDescriptor)new ControllerParameterDescriptor
+                        {
+                            Name = "request",
+                            ParameterType = typeof(ExtendedRequest),
+                            BindingInfo = new Microsoft.AspNetCore.Mvc.ModelBinding.BindingInfo
+                            {
+                                BindingSource = Microsoft.AspNetCore.Mvc.ModelBinding.BindingSource.Body
+                            }
+                        }
+                    }
+                }
+            };
+        }
     }
 
     // Test controller classes
@@ -446,6 +600,14 @@ namespace MCPBuckle.Tests
         [MCPExclude]
         [HttpGet]
         public IActionResult ExcludedMethod() => Ok();
+
+        // Test method for [FromQuery] complex object (Level 1 fix)
+        [HttpGet]
+        public IActionResult GetWithComplexQuery([FromQuery] ExtendedRequest request) => Ok();
+
+        // Test method for inheritance chain walking (Level 2 fix)  
+        [HttpPost]
+        public IActionResult PostWithInheritedModel([FromBody] ExtendedRequest request) => Ok();
     }
 
     [MCPExclude]
@@ -459,5 +621,28 @@ namespace MCPBuckle.Tests
     {
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
+    }
+
+    // Test models for inheritance chain testing (mirrors LlmProviderModelRequest hierarchy)
+    public class BaseRequest
+    {
+        [Required]
+        public string Provider { get; set; } = string.Empty;
+        
+        [Required]
+        public string ModelName { get; set; } = string.Empty;
+        
+        [Required]
+        public string PromptVersion { get; set; } = string.Empty;
+    }
+
+    public class ExtendedRequest : BaseRequest
+    {
+        [Required]
+        public string PromptType { get; set; } = string.Empty;
+        
+        [Required]
+        [Range(1, int.MaxValue)]
+        public int TenantId { get; set; }
     }
 }

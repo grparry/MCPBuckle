@@ -470,6 +470,28 @@ namespace MCPBuckle.Services
                 }
             }
 
+            // Additional [FromQuery] attribute detection for complex objects
+            // This fixes the issue where complex objects with [FromQuery] were incorrectly classified as "body"
+            try
+            {
+                // Get the corresponding method parameter to check for [FromQuery] attribute
+                var methodInfo = actionDescriptor.MethodInfo;
+                if (methodInfo != null)
+                {
+                    var methodParam = methodInfo.GetParameters()
+                        .FirstOrDefault(p => p.Name == parameter.Name);
+                    
+                    if (methodParam?.GetCustomAttribute<FromQueryAttribute>() != null)
+                    {
+                        return "query";
+                    }
+                }
+            }
+            catch
+            {
+                // Ignore reflection errors and continue with existing logic
+            }
+
             // Check if it's a route parameter by looking at the route template
             var routeTemplate = actionDescriptor.AttributeRouteInfo?.Template ?? string.Empty;
             if (routeTemplate.Contains($"{{{parameter.Name}}}") || 
@@ -478,7 +500,7 @@ namespace MCPBuckle.Services
                 return "route";
             }
 
-            // Complex types typically come from body
+            // Complex types typically come from body (unless explicitly marked with [FromQuery] above)
             if (IsComplexType(parameter.ParameterType))
             {
                 return "body";
@@ -587,7 +609,10 @@ namespace MCPBuckle.Services
             }
 
             processedTypes.Add(objectType);
-            var objectProperties = objectType.GetProperties(BindingFlags.Public | BindingFlags.Instance);
+            
+            // Walk the full inheritance chain to include base class properties
+            // This fixes the issue where inherited properties (like Provider, ModelName, PromptVersion) were missing
+            var objectProperties = GetInheritanceChainProperties(objectType);
             
             foreach (var prop in objectProperties)
             {
@@ -775,6 +800,31 @@ namespace MCPBuckle.Services
                 Properties = properties,
                 Required = required
             };
+        }
+
+        /// <summary>
+        /// Gets properties from the entire inheritance chain of a type.
+        /// This ensures that base class properties are included in schema generation.
+        /// </summary>
+        private PropertyInfo[] GetInheritanceChainProperties(Type type)
+        {
+            var properties = new List<PropertyInfo>();
+            var currentType = type;
+
+            // Walk up inheritance chain - essential for PromptRequest : LlmProviderModelRequest
+            while (currentType != null && currentType != typeof(object))
+            {
+                var declaredProperties = currentType.GetProperties(
+                    BindingFlags.Public | 
+                    BindingFlags.Instance | 
+                    BindingFlags.DeclaredOnly)
+                    .Where(p => p.CanRead);
+                
+                properties.AddRange(declaredProperties);
+                currentType = currentType.BaseType;
+            }
+
+            return properties.ToArray();
         }
 
         #endregion

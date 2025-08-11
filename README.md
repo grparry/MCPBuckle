@@ -19,6 +19,32 @@ MCPBuckle is designed to be a **complementary tool** to Swashbuckle, not a repla
 - **Granular Control** - Include/exclude controllers and actions with flexible configuration
 - **Side-by-side with Swashbuckle** - Works seamlessly alongside existing OpenAPI tooling
 
+## What's New in 1.7.0
+
+### 🚀 Critical Fixes for Complex Parameter Handling
+
+- **Fixed: [FromQuery] Complex Object Detection** - Resolved critical issue where complex objects with `[FromQuery]` attribute were incorrectly classified as "body" parameters
+  - Complex objects with `[FromQuery]` now properly return "query" source instead of "body"
+  - Fixes MCP tool generation for complex query parameter types like `PromptRequest` and `TenantPromptSettingsRequest`
+  - Essential for LLM prompt management APIs with inheritance-based parameter structures
+
+- **Fixed: Inheritance Chain Property Walking** - Resolved issue where base class properties were missing from MCP tool definitions
+  - Added comprehensive inheritance chain walking that includes all base class properties
+  - Base class properties (like `Provider`, `ModelName`, `PromptVersion`) now appear in MCP tool schemas
+  - Required attribute detection now works across inheritance hierarchies
+  - Critical for APIs using inheritance-based parameter models
+
+### 🔧 Enhanced Schema Generation
+- **Complete Parameter Schemas** - Both fixes work together to provide comprehensive parameter expansion
+- **Inheritance-Aware Processing** - Full property walking across inheritance chains
+- **Correct Source Annotations** - Proper parameter source detection for complex inherited objects
+- **Backward Compatibility** - All existing functionality preserved and enhanced
+
+### ✅ Comprehensive Testing
+- **3 New Targeted Tests** - Specific validation for both fixes working individually and together
+- **100% Test Pass Rate** - All new and existing tests pass, ensuring stability
+- **Real-World Test Models** - Test cases mirror actual usage patterns with inheritance hierarchies
+
 ## What's New in 1.6.0
 
 ### 🚀 Major New Features
