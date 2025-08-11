@@ -101,7 +101,7 @@ namespace MCPBuckle.Tests
             }
             else
             {
-                Assert.True(false, $"Unexpected enum value type: {enumList.FirstOrDefault()?.GetType().Name ?? "null"}");
+                Assert.Fail($"Unexpected enum value type: {enumList.FirstOrDefault()?.GetType().Name ?? "null"}");
             }
         }
 
@@ -133,7 +133,7 @@ namespace MCPBuckle.Tests
             }
             else
             {
-                Assert.True(false, $"Unexpected enum value type: {enumList.FirstOrDefault()?.GetType().Name ?? "null"}");
+                Assert.Fail($"Unexpected enum value type: {enumList.FirstOrDefault()?.GetType().Name ?? "null"}");
             }
         }
 

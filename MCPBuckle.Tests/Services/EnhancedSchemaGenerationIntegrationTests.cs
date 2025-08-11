@@ -196,7 +196,7 @@ namespace MCPBuckle.Tests.Services
                 AttributeRouteInfo = new Microsoft.AspNetCore.Mvc.Routing.AttributeRouteInfo { Template = route },
                 Parameters = parameters.Cast<Microsoft.AspNetCore.Mvc.Abstractions.ParameterDescriptor>().ToList(),
                 ControllerTypeInfo = typeof(TestController).GetTypeInfo(),
-                MethodInfo = typeof(TestController).GetMethod("GetById") ?? typeof(TestController).GetMethod("DefaultAction")
+                MethodInfo = typeof(TestController).GetMethod("GetById") ?? typeof(TestController).GetMethod("DefaultAction")!
             };
 
             return descriptor;

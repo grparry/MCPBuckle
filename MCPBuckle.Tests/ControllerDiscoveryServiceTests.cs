@@ -372,7 +372,7 @@ namespace MCPBuckle.Tests
             Assert.True(requestParam.Value.Properties.ContainsKey("PromptType"), "Should include derived class properties");
         }
 
-        private ControllerDiscoveryService CreateControllerDiscoveryService(McpBuckleOptions options = null)
+        private ControllerDiscoveryService CreateControllerDiscoveryService(McpBuckleOptions? options = null)
         {
             options ??= _defaultOptions;
             return new ControllerDiscoveryService(
@@ -395,7 +395,7 @@ namespace MCPBuckle.Tests
                     ControllerName = "TestController",
                     ActionName = "GetUser",
                     ControllerTypeInfo = controllerType.GetTypeInfo(),
-                    MethodInfo = methodInfo,
+                    MethodInfo = methodInfo!,
                     Parameters = new List<ParameterDescriptor>
                     {
                         (ParameterDescriptor)new ControllerParameterDescriptor
@@ -424,7 +424,7 @@ namespace MCPBuckle.Tests
                     ControllerName = "ExcludedController",
                     ActionName = "GetData",
                     ControllerTypeInfo = controllerType.GetTypeInfo(),
-                    MethodInfo = methodInfo
+                    MethodInfo = methodInfo!
                 }
             };
         }
@@ -441,7 +441,7 @@ namespace MCPBuckle.Tests
                     ControllerName = "TestController",
                     ActionName = "ExcludedMethod",
                     ControllerTypeInfo = controllerType.GetTypeInfo(),
-                    MethodInfo = methodInfo
+                    MethodInfo = methodInfo!
                 }
             };
         }
@@ -458,7 +458,7 @@ namespace MCPBuckle.Tests
                     ControllerName = "TestController",
                     ActionName = "CreateUser",
                     ControllerTypeInfo = controllerType.GetTypeInfo(),
-                    MethodInfo = methodInfo,
+                    MethodInfo = methodInfo!,
                     Parameters = new List<ParameterDescriptor>
                     {
                         (ParameterDescriptor)new ControllerParameterDescriptor
@@ -488,7 +488,7 @@ namespace MCPBuckle.Tests
                     ControllerName = "TestController",
                     ActionName = "PostUser",
                     ControllerTypeInfo = controllerType.GetTypeInfo(),
-                    MethodInfo = methodInfo,
+                    MethodInfo = methodInfo!,
                     Parameters = new List<ParameterDescriptor>
                     {
                         (ParameterDescriptor)new ControllerParameterDescriptor
@@ -517,7 +517,7 @@ namespace MCPBuckle.Tests
                     ControllerName = "TestController",
                     ActionName = "GetUserAsync",
                     ControllerTypeInfo = controllerType.GetTypeInfo(),
-                    MethodInfo = methodInfo,
+                    MethodInfo = methodInfo!,
                     Parameters = new List<ParameterDescriptor>()
                 }
             };
@@ -535,7 +535,7 @@ namespace MCPBuckle.Tests
                     ControllerName = "TestController",
                     ActionName = "GetWithComplexQuery",
                     ControllerTypeInfo = controllerType.GetTypeInfo(),
-                    MethodInfo = methodInfo,
+                    MethodInfo = methodInfo!,
                     Parameters = new List<ParameterDescriptor>
                     {
                         (ParameterDescriptor)new ControllerParameterDescriptor
@@ -564,7 +564,7 @@ namespace MCPBuckle.Tests
                     ControllerName = "TestController",
                     ActionName = "PostWithInheritedModel",
                     ControllerTypeInfo = controllerType.GetTypeInfo(),
-                    MethodInfo = methodInfo,
+                    MethodInfo = methodInfo!,
                     Parameters = new List<ParameterDescriptor>
                     {
                         (ParameterDescriptor)new ControllerParameterDescriptor

@@ -25,7 +25,7 @@ namespace MCPBuckle.Tests
             var methodInfo = typeof(DocumentedTestController).GetMethod(nameof(DocumentedTestController.GetUser), new[] { typeof(int) });
 
             // Act
-            var documentation = _xmlDocumentationService.GetMethodDocumentation(controllerType, methodInfo);
+            var documentation = _xmlDocumentationService.GetMethodDocumentation(controllerType, methodInfo!);
 
             // Assert
             // Note: Without actual XML documentation file, this will return null
@@ -41,7 +41,7 @@ namespace MCPBuckle.Tests
             var methodInfo = typeof(DocumentedTestController).GetMethod(nameof(DocumentedTestController.GetUser), new[] { typeof(int) });
 
             // Act
-            var documentation = _xmlDocumentationService.GetParameterDocumentation(controllerType, methodInfo, "id");
+            var documentation = _xmlDocumentationService.GetParameterDocumentation(controllerType, methodInfo!, "id");
 
             // Assert
             // Note: Without actual XML documentation file, this will return null
@@ -55,7 +55,7 @@ namespace MCPBuckle.Tests
             var controllerType = typeof(DocumentedTestController).GetTypeInfo();
 
             // Act
-            var documentation = _xmlDocumentationService.GetMethodDocumentation(controllerType, null);
+            var documentation = _xmlDocumentationService.GetMethodDocumentation(controllerType, null!);
 
             // Assert
             Assert.Null(documentation);
@@ -68,7 +68,7 @@ namespace MCPBuckle.Tests
             var controllerType = typeof(DocumentedTestController).GetTypeInfo();
 
             // Act
-            var documentation = _xmlDocumentationService.GetParameterDocumentation(controllerType, null, "id");
+            var documentation = _xmlDocumentationService.GetParameterDocumentation(controllerType, null!, "id");
 
             // Assert
             Assert.Null(documentation);
@@ -82,7 +82,7 @@ namespace MCPBuckle.Tests
             var methodInfo = typeof(DocumentedTestController).GetMethod(nameof(DocumentedTestController.GetUser), new[] { typeof(int) });
 
             // Act
-            var documentation = _xmlDocumentationService.GetParameterDocumentation(controllerType, methodInfo, "");
+            var documentation = _xmlDocumentationService.GetParameterDocumentation(controllerType, methodInfo!, "");
 
             // Assert
             Assert.Null(documentation);
@@ -96,7 +96,7 @@ namespace MCPBuckle.Tests
             var methodInfo = typeof(DocumentedTestController).GetMethod(nameof(DocumentedTestController.GetUser), new[] { typeof(int) });
 
             // Act
-            var documentation = _xmlDocumentationService.GetParameterDocumentation(controllerType, methodInfo, null);
+            var documentation = _xmlDocumentationService.GetParameterDocumentation(controllerType, methodInfo!, null!);
 
             // Assert
             Assert.Null(documentation);
@@ -118,7 +118,7 @@ namespace MCPBuckle.Tests
             var methodInfo = typeof(DocumentedTestController).GetMethod(nameof(DocumentedTestController.GetGeneric));
 
             // Act
-            var documentation = _xmlDocumentationService.GetMethodDocumentation(controllerType, methodInfo);
+            var documentation = _xmlDocumentationService.GetMethodDocumentation(controllerType, methodInfo!);
 
             // Assert
             Assert.Null(documentation);
@@ -132,7 +132,7 @@ namespace MCPBuckle.Tests
             var methodInfo = typeof(DocumentedTestController).GetMethod(nameof(DocumentedTestController.GetUserAsync));
 
             // Act
-            var documentation = _xmlDocumentationService.GetMethodDocumentation(controllerType, methodInfo);
+            var documentation = _xmlDocumentationService.GetMethodDocumentation(controllerType, methodInfo!);
 
             // Assert
             Assert.Null(documentation);
@@ -146,7 +146,7 @@ namespace MCPBuckle.Tests
             var methodInfo = typeof(DocumentedTestController).GetMethod(nameof(DocumentedTestController.GetUser), new[] { typeof(int) });
 
             // Act
-            var documentation = _xmlDocumentationService.GetMethodDocumentation(controllerType, methodInfo);
+            var documentation = _xmlDocumentationService.GetMethodDocumentation(controllerType, methodInfo!);
 
             // Assert
             Assert.Null(documentation);

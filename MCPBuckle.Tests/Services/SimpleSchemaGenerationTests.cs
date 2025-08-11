@@ -118,7 +118,7 @@ namespace MCPBuckle.Tests.Services
                 AttributeRouteInfo = new Microsoft.AspNetCore.Mvc.Routing.AttributeRouteInfo { Template = route },
                 Parameters = new List<Microsoft.AspNetCore.Mvc.Abstractions.ParameterDescriptor> { parameter },
                 ControllerTypeInfo = typeof(SimpleTestController).GetTypeInfo(),
-                MethodInfo = typeof(SimpleTestController).GetMethod("TestMethod")
+                MethodInfo = typeof(SimpleTestController).GetMethod("TestMethod")!
             };
 
             return descriptor;
@@ -139,7 +139,7 @@ namespace MCPBuckle.Tests.Services
                 AttributeRouteInfo = new Microsoft.AspNetCore.Mvc.Routing.AttributeRouteInfo { Template = route },
                 Parameters = new List<Microsoft.AspNetCore.Mvc.Abstractions.ParameterDescriptor> { parameter },
                 ControllerTypeInfo = typeof(SimpleTestController).GetTypeInfo(),
-                MethodInfo = typeof(SimpleTestController).GetMethod("TestMethod")
+                MethodInfo = typeof(SimpleTestController).GetMethod("TestMethod")!
             };
 
             return descriptor;

@@ -280,7 +280,7 @@ namespace MCPBuckle.Tests
         [InlineData("   ")]
         [InlineData("Valid reason")]
         [InlineData(null)]
-        public void MCPExcludeAttribute_AcceptsVariousReasonValues(string reason)
+        public void MCPExcludeAttribute_AcceptsVariousReasonValues(string? reason)
         {
             // Act
             var attribute = new MCPExcludeAttribute(reason);

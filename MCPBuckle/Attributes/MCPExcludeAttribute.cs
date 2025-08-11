@@ -24,7 +24,7 @@ namespace MCPBuckle.Attributes
         /// Initializes a new instance of the <see cref="MCPExcludeAttribute"/> class with a reason.
         /// </summary>
         /// <param name="reason">The reason for excluding this controller or action.</param>
-        public MCPExcludeAttribute(string reason)
+        public MCPExcludeAttribute(string? reason)
         {
             Reason = reason;
         }
