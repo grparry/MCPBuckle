@@ -83,8 +83,8 @@ namespace MCPBuckle.Tests.Services
             // Route parameters should be detected from template
             Assert.Contains("orgId", inputSchema.Properties.Keys);
             Assert.Equal("route", inputSchema.Properties["orgId"].Source);
-            Assert.Contains("source", inputSchema.Properties["orgId"].Annotations.Keys);
-            Assert.Equal("route", inputSchema.Properties["orgId"].Annotations["source"]);
+            Assert.True(inputSchema.Properties["orgId"].Annotations?.ContainsKey("source") == true);
+            Assert.Equal("route", inputSchema.Properties["orgId"].Annotations?["source"]);
             
             Assert.Contains("userId", inputSchema.Properties.Keys);
             Assert.Equal("route", inputSchema.Properties["userId"].Source);
@@ -154,8 +154,8 @@ namespace MCPBuckle.Tests.Services
             Assert.Equal("route", inputSchema.Properties["version"].Source);
             
             // Verify route metadata is preserved
-            Assert.True(inputSchema.Properties["orgId"].Annotations.ContainsKey("isRouteParameter"));
-            Assert.True(inputSchema.Properties["orgId"].Annotations.ContainsKey("routeTemplate"));
+            Assert.True(inputSchema.Properties["orgId"].Annotations?.ContainsKey("isRouteParameter") == true);
+            Assert.True(inputSchema.Properties["orgId"].Annotations?.ContainsKey("routeTemplate") == true);
         }
 
         #endregion
@@ -195,7 +195,7 @@ namespace MCPBuckle.Tests.Services
             Assert.Equal("query", inputSchema.Properties["isActive"].Source);
             
             // HTTP method context should be preserved
-            Assert.Equal("GET", inputSchema.Properties["filter"].Annotations["httpMethod"]);
+            Assert.Equal("GET", inputSchema.Properties["filter"].Annotations?["httpMethod"]);
         }
 
         [Fact]
@@ -229,7 +229,7 @@ namespace MCPBuckle.Tests.Services
             Assert.Equal("query", inputSchema.Properties["version"].Source);
             
             // HTTP method context should be preserved
-            Assert.Equal("POST", inputSchema.Properties["model"].Annotations["httpMethod"]);
+            Assert.Equal("POST", inputSchema.Properties["model"].Annotations?["httpMethod"]);
         }
 
         [Fact]
@@ -302,8 +302,8 @@ namespace MCPBuckle.Tests.Services
             Assert.Equal("query", inputSchema.Properties["includeDebug"].Source);
             
             // Source detection method should be marked as explicit
-            Assert.Equal("explicit", inputSchema.Properties["orgId"].Annotations["sourceDetectionMethod"]);
-            Assert.Equal("explicit", inputSchema.Properties["model"].Annotations["sourceDetectionMethod"]);
+            Assert.Equal("explicit", inputSchema.Properties["orgId"].Annotations?["sourceDetectionMethod"]);
+            Assert.Equal("explicit", inputSchema.Properties["model"].Annotations?["sourceDetectionMethod"]);
         }
 
         [Fact]
@@ -332,7 +332,7 @@ namespace MCPBuckle.Tests.Services
             
             // Complex object with [FromQuery] should be query, not body
             Assert.Equal("query", tool.InputSchema.Properties["searchRequest"].Source);
-            Assert.Equal("explicit", tool.InputSchema.Properties["searchRequest"].Annotations["sourceDetectionMethod"]);
+            Assert.Equal("explicit", tool.InputSchema.Properties["searchRequest"].Annotations?["sourceDetectionMethod"]);
         }
 
         #endregion
@@ -366,8 +366,8 @@ namespace MCPBuckle.Tests.Services
             var modelProperty = inputSchema.Properties["model"];
             
             // Validation metadata should be preserved
-            Assert.True(modelProperty.Annotations.ContainsKey("validationRules"));
-            Assert.True(modelProperty.Annotations.ContainsKey("parameterValidation"));
+            Assert.True(modelProperty.Annotations?.ContainsKey("validationRules") == true);
+            Assert.True(modelProperty.Annotations?.ContainsKey("parameterValidation") == true);
             
             // Required properties should be identified
             Assert.Contains("Name", modelProperty.Required);
@@ -403,8 +403,8 @@ namespace MCPBuckle.Tests.Services
             // Route template context should be preserved for all parameters
             foreach (var param in inputSchema.Properties.Values)
             {
-                Assert.True(param.Annotations.ContainsKey("routeTemplate"));
-                Assert.Equal("api/organizations/{orgId}/users/{userId}", param.Annotations["routeTemplate"]);
+                Assert.True(param.Annotations?.ContainsKey("routeTemplate") == true);
+                Assert.Equal("api/organizations/{orgId}/users/{userId}", param.Annotations?["routeTemplate"]);
             }
         }
 
@@ -437,8 +437,8 @@ namespace MCPBuckle.Tests.Services
             // HTTP method context should be preserved for all parameters
             foreach (var param in inputSchema.Properties.Values)
             {
-                Assert.True(param.Annotations.ContainsKey("httpMethod"));
-                Assert.Equal("PUT", param.Annotations["httpMethod"]);
+                Assert.True(param.Annotations?.ContainsKey("httpMethod") == true);
+                Assert.Equal("PUT", param.Annotations?["httpMethod"]);
             }
         }
 
@@ -473,8 +473,8 @@ namespace MCPBuckle.Tests.Services
             
             // Should correctly identify body parameter with full context
             Assert.Equal("body", inputSchema.Properties["request"].Source);
-            Assert.Equal("explicit", inputSchema.Properties["request"].Annotations["sourceDetectionMethod"]);
-            Assert.Equal("POST", inputSchema.Properties["request"].Annotations["httpMethod"]);
+            Assert.Equal("explicit", inputSchema.Properties["request"].Annotations?["sourceDetectionMethod"]);
+            Assert.Equal("POST", inputSchema.Properties["request"].Annotations?["httpMethod"]);
         }
 
         [Fact]
@@ -522,9 +522,9 @@ namespace MCPBuckle.Tests.Services
             // All parameters should have consistent metadata
             foreach (var param in inputSchema.Properties.Values)
             {
-                Assert.True(param.Annotations.ContainsKey("sourceDetectionMethod"));
-                Assert.True(param.Annotations.ContainsKey("httpMethod"));
-                Assert.True(param.Annotations.ContainsKey("routeTemplate"));
+                Assert.True(param.Annotations?.ContainsKey("sourceDetectionMethod") == true);
+                Assert.True(param.Annotations?.ContainsKey("httpMethod") == true);
+                Assert.True(param.Annotations?.ContainsKey("routeTemplate") == true);
             }
         }
 
