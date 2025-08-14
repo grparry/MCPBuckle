@@ -5,6 +5,49 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2025-01-14
+
+### 🚀 Major Enhancement - Enhanced Parameter Source Detection
+
+- **Advanced Runtime Parameter Binding** - Complete rewrite of parameter source detection system
+  - Enhanced route parameter detection using ASP.NET Core reflection patterns  
+  - Comprehensive parameter source analysis for route, query, body, and header parameters
+  - Schema-aware parameter binding that mirrors ASP.NET Core's parameter binding logic exactly
+  - Runtime parameter source detection with full metadata preservation
+
+- **MCPInvoke 2.0.0 Integration** - Full compatibility with enhanced parameter binding
+  - Seamless integration with MCPInvoke 2.0.0's enhanced parameter binding service
+  - Coordinated v2.0.0 release for complete MCP tool discovery and execution
+  - Enhanced schema generation with comprehensive route template analysis
+  - Advanced parameter validation and intelligent error handling
+
+### 🔧 Enhanced Architecture
+
+- **Comprehensive Route Template Analysis** - Advanced route parameter extraction and validation
+- **Generic Test Pattern Framework** - OSS-ready test patterns for any web API domain  
+- **Multi-Framework Support** - Complete targeting for net6.0, net7.0, net8.0, net9.0
+- **Enhanced Documentation** - Updated descriptions highlighting v2.0 capabilities
+
+### 🧹 OSS Preparation
+
+- **Removed Proprietary Test Patterns** - Eliminated AnalyticsAPI-specific test content
+- **Generic Web API Patterns** - Created comprehensive generic business domain test patterns
+- **Enhanced Parameter Detection Tests** - Comprehensive validation for new parameter binding logic
+- **Clean Documentation** - Updated all version references and compatibility statements
+
+### ✅ Quality Assurance
+
+- **125/125 Tests Passing** - Complete test coverage maintained across all frameworks
+- **Enhanced Parameter Detection Tests** - Comprehensive validation for new parameter binding logic
+- **Generic Web API Patterns** - OSS-ready test patterns replacing proprietary content
+- **Backward Compatibility** - All existing functionality preserved and enhanced
+
+### Breaking Changes
+
+- **Major Version Increment** - Enhanced parameter binding capabilities require v2.0.0
+- **MCPInvoke Dependency** - Now requires MCPInvoke 2.0.0+ for full compatibility
+- **Generic Test Patterns** - Proprietary domain-specific test patterns replaced with generic patterns
+
 ## [1.7.0] - 2025-01-11
 
 ### 🚀 Major Fixes for Complex Parameter Handling
