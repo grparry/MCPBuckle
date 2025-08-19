@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2025-08-19
+
+### 🔧 Fixed - Claude Code CLI Compatibility
+
+- **Critical Fix: Optional Route Parameter Parsing** - Resolved Claude Code CLI compatibility issues with ASP.NET Core optional route parameters
+  - Fixed regex pattern in `ExtractRouteParameters()` method to properly strip `?` from parameter names like `{customerId?}`  
+  - Updated regex from `@"\{([^}:]+)(?::[^}]+)?\}"` to `@"\{([^}:?]+)(?:\?)?(?::[^}]+)?\}"`
+  - Parameter names now correctly parse as `customerId` instead of `customerId?`
+  - Resolves Claude Code CLI error: `Property keys should match pattern '^[a-zA-Z0-9_.-]{1,64}$'`
+
+- **Enhanced Type Mapping: Nullable Type Support** - Added support for nullable types in route parameter type detection
+  - Updated `MapDotNetTypeToJsonSchemaType()` method to handle nullable types like `int?`, `bool?`, etc.
+  - Nullable types are now correctly unwrapped to their underlying type for JSON schema generation
+  - `int?` now properly maps to `"integer"` instead of `"object"`
+
+### ✅ Quality Assurance
+
+- **3 New TDD Tests Added** - Comprehensive test coverage for the optional route parameter fixes:
+  - `ExtractRouteParameters_WithOptionalParameter_ShouldRemoveQuestionMark` - Validates single optional parameter parsing
+  - `ExtractRouteParameters_WithMultipleOptionalParameters_ShouldRemoveAllQuestionMarks` - Validates multiple optional parameters
+  - `ExtractRouteParameters_WithOptionalParameterAndConstraints_ShouldHandleBoth` - Validates optional parameters with route constraints
+- **128/128 Tests Passing** - All tests continue to pass, ensuring backward compatibility
+- **End-to-End Validation** - Verified all 247 MCP tools now have property names compatible with Claude Code CLI
+
+### Impact
+
+This fix specifically addresses Claude Code CLI integration issues where optional ASP.NET Core route parameters (using `{parameter?}` syntax) were generating invalid property names in MCP schemas. Before version 2.1.0, tools with optional route parameters would be rejected by Claude Code CLI due to invalid character patterns. With version 2.1.0, all MCP-generated tools are fully compatible with Claude Code CLI's property naming requirements.
+
 ## [2.0.0] - 2025-01-14
 
 ### 🚀 Major Enhancement - Enhanced Parameter Source Detection

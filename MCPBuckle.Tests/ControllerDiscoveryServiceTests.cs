@@ -372,6 +372,103 @@ namespace MCPBuckle.Tests
             Assert.True(requestParam.Value.Properties.ContainsKey("PromptType"), "Should include derived class properties");
         }
 
+        [Fact]
+        public void ExtractRouteParameters_WithOptionalParameter_ShouldRemoveQuestionMark()
+        {
+            // Arrange
+            var actionDescriptors = CreateTestActionDescriptorsWithOptionalRouteParameter();
+            _mockActionDescriptorProvider.Setup(p => p.ActionDescriptors)
+                .Returns(new ActionDescriptorCollection(actionDescriptors, 1));
+
+            // Mock the type schema generator for integer types
+            var intSchema = new McpSchema { Type = "integer" };
+            _mockTypeSchemaGenerator.Setup(g => g.GenerateSchema(It.IsAny<Type>())).Returns(intSchema);
+
+            var service = CreateControllerDiscoveryService();
+
+            // Act
+            var tools = service.DiscoverTools();
+
+            // Assert
+            Assert.Single(tools);
+            var tool = tools.First();
+            Assert.NotNull(tool.InputSchema);
+            Assert.NotNull(tool.InputSchema.Properties);
+            
+            // The key assertion: should have 'customerId' not 'customerId?'
+            Assert.True(tool.InputSchema.Properties.ContainsKey("customerId"), "Should contain 'customerId' parameter");
+            Assert.False(tool.InputSchema.Properties.ContainsKey("customerId?"), "Should NOT contain 'customerId?' parameter with question mark");
+            
+            // Verify the parameter is properly configured
+            var customerIdParam = tool.InputSchema.Properties["customerId"];
+            Assert.Equal("integer", customerIdParam.Type);
+            Assert.Equal("route", customerIdParam.Source);
+        }
+
+        [Fact]
+        public void ExtractRouteParameters_WithMultipleOptionalParameters_ShouldRemoveAllQuestionMarks()
+        {
+            // Arrange
+            var actionDescriptors = CreateTestActionDescriptorsWithMultipleOptionalRouteParameters();
+            _mockActionDescriptorProvider.Setup(p => p.ActionDescriptors)
+                .Returns(new ActionDescriptorCollection(actionDescriptors, 1));
+
+            // Mock the type schema generator for integer types
+            var intSchema = new McpSchema { Type = "integer" };
+            _mockTypeSchemaGenerator.Setup(g => g.GenerateSchema(It.IsAny<Type>())).Returns(intSchema);
+
+            var service = CreateControllerDiscoveryService();
+
+            // Act
+            var tools = service.DiscoverTools();
+
+            // Assert
+            Assert.Single(tools);
+            var tool = tools.First();
+            Assert.NotNull(tool.InputSchema);
+            Assert.NotNull(tool.InputSchema.Properties);
+            
+            // Should have clean parameter names
+            Assert.True(tool.InputSchema.Properties.ContainsKey("tenantId"), "Should contain 'tenantId' parameter");
+            Assert.True(tool.InputSchema.Properties.ContainsKey("customerId"), "Should contain 'customerId' parameter");
+            
+            // Should NOT have question marks
+            Assert.False(tool.InputSchema.Properties.ContainsKey("tenantId?"), "Should NOT contain 'tenantId?' with question mark");
+            Assert.False(tool.InputSchema.Properties.ContainsKey("customerId?"), "Should NOT contain 'customerId?' with question mark");
+        }
+
+        [Fact]
+        public void ExtractRouteParameters_WithOptionalParameterAndConstraints_ShouldHandleBoth()
+        {
+            // Arrange
+            var actionDescriptors = CreateTestActionDescriptorsWithOptionalConstrainedRouteParameter();
+            _mockActionDescriptorProvider.Setup(p => p.ActionDescriptors)
+                .Returns(new ActionDescriptorCollection(actionDescriptors, 1));
+
+            // Mock the type schema generator for integer types
+            var intSchema = new McpSchema { Type = "integer" };
+            _mockTypeSchemaGenerator.Setup(g => g.GenerateSchema(It.IsAny<Type>())).Returns(intSchema);
+
+            var service = CreateControllerDiscoveryService();
+
+            // Act
+            var tools = service.DiscoverTools();
+
+            // Assert
+            Assert.Single(tools);
+            var tool = tools.First();
+            Assert.NotNull(tool.InputSchema);
+            Assert.NotNull(tool.InputSchema.Properties);
+            
+            // Should extract clean parameter name even with constraints
+            Assert.True(tool.InputSchema.Properties.ContainsKey("id"), "Should contain 'id' parameter");
+            Assert.False(tool.InputSchema.Properties.ContainsKey("id?"), "Should NOT contain 'id?' with question mark");
+            
+            var idParam = tool.InputSchema.Properties["id"];
+            Assert.Equal("integer", idParam.Type);
+            Assert.Equal("route", idParam.Source);
+        }
+
         private ControllerDiscoveryService CreateControllerDiscoveryService(McpBuckleOptions? options = null)
         {
             options ??= _defaultOptions;
@@ -580,6 +677,98 @@ namespace MCPBuckle.Tests
                 }
             };
         }
+
+        private List<ControllerActionDescriptor> CreateTestActionDescriptorsWithOptionalRouteParameter()
+        {
+            var controllerType = typeof(TestController);
+            var methodInfo = controllerType.GetMethod(nameof(TestController.GetCustomerWithOptional));
+            
+            return new List<ControllerActionDescriptor>
+            {
+                new ControllerActionDescriptor
+                {
+                    ControllerName = "TestController",
+                    ActionName = "GetCustomerWithOptional",
+                    ControllerTypeInfo = controllerType.GetTypeInfo(),
+                    MethodInfo = methodInfo!,
+                    Parameters = new List<ParameterDescriptor>
+                    {
+                        (ParameterDescriptor)new ControllerParameterDescriptor
+                        {
+                            Name = "customerId",
+                            ParameterType = typeof(int?)
+                        }
+                    },
+                    AttributeRouteInfo = new Microsoft.AspNetCore.Mvc.Routing.AttributeRouteInfo
+                    {
+                        Template = "api/customer/{customerId?}"
+                    }
+                }
+            };
+        }
+
+        private List<ControllerActionDescriptor> CreateTestActionDescriptorsWithMultipleOptionalRouteParameters()
+        {
+            var controllerType = typeof(TestController);
+            var methodInfo = controllerType.GetMethod(nameof(TestController.GetTenantCustomerWithOptional));
+            
+            return new List<ControllerActionDescriptor>
+            {
+                new ControllerActionDescriptor
+                {
+                    ControllerName = "TestController",
+                    ActionName = "GetTenantCustomerWithOptional",
+                    ControllerTypeInfo = controllerType.GetTypeInfo(),
+                    MethodInfo = methodInfo!,
+                    Parameters = new List<ParameterDescriptor>
+                    {
+                        (ParameterDescriptor)new ControllerParameterDescriptor
+                        {
+                            Name = "tenantId",
+                            ParameterType = typeof(int?)
+                        },
+                        (ParameterDescriptor)new ControllerParameterDescriptor
+                        {
+                            Name = "customerId",
+                            ParameterType = typeof(int?)
+                        }
+                    },
+                    AttributeRouteInfo = new Microsoft.AspNetCore.Mvc.Routing.AttributeRouteInfo
+                    {
+                        Template = "api/tenant/{tenantId?}/customer/{customerId?}"
+                    }
+                }
+            };
+        }
+
+        private List<ControllerActionDescriptor> CreateTestActionDescriptorsWithOptionalConstrainedRouteParameter()
+        {
+            var controllerType = typeof(TestController);
+            var methodInfo = controllerType.GetMethod(nameof(TestController.GetWithOptionalConstraint));
+            
+            return new List<ControllerActionDescriptor>
+            {
+                new ControllerActionDescriptor
+                {
+                    ControllerName = "TestController",
+                    ActionName = "GetWithOptionalConstraint",
+                    ControllerTypeInfo = controllerType.GetTypeInfo(),
+                    MethodInfo = methodInfo!,
+                    Parameters = new List<ParameterDescriptor>
+                    {
+                        (ParameterDescriptor)new ControllerParameterDescriptor
+                        {
+                            Name = "id",
+                            ParameterType = typeof(int?)
+                        }
+                    },
+                    AttributeRouteInfo = new Microsoft.AspNetCore.Mvc.Routing.AttributeRouteInfo
+                    {
+                        Template = "api/items/{id:int?}"
+                    }
+                }
+            };
+        }
     }
 
     // Test controller classes
@@ -608,6 +797,16 @@ namespace MCPBuckle.Tests
         // Test method for inheritance chain walking (Level 2 fix)  
         [HttpPost]
         public IActionResult PostWithInheritedModel([FromBody] ExtendedRequest request) => Ok();
+
+        // Test methods for optional route parameter parsing
+        [HttpGet]
+        public IActionResult GetCustomerWithOptional(int? customerId) => Ok($"Customer {customerId}");
+
+        [HttpGet]
+        public IActionResult GetTenantCustomerWithOptional(int? tenantId, int? customerId) => Ok($"Tenant {tenantId}, Customer {customerId}");
+
+        [HttpGet]
+        public IActionResult GetWithOptionalConstraint(int? id) => Ok($"Item {id}");
     }
 
     [MCPExclude]

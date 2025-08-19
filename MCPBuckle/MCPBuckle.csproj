@@ -5,10 +5,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <Version>2.0.0</Version>
+    <Version>2.1.0</Version>
     <Authors>MCPBuckle Contributors</Authors>
     <Company>MCPBuckle</Company>
-    <Description>MCPBuckle is a comprehensive .NET library that generates Model Context Protocol (MCP) JSON from ASP.NET Core API metadata with enhanced parameter binding analysis. Version 2.0.0 introduces advanced runtime parameter source detection, comprehensive route template analysis, and enhanced schema generation with full metadata preservation. Features include automatic detection of route parameters, query parameters, body parameters, and headers using ASP.NET Core reflection patterns. Fully compatible with MCPInvoke 2.0.0 for complete MCP tool discovery and execution.</Description>
+    <Description>MCPBuckle is a comprehensive .NET library that generates Model Context Protocol (MCP) JSON from ASP.NET Core API metadata with enhanced parameter binding analysis. Version 2.1.0 fixes Claude Code CLI compatibility issues with optional route parameters and adds support for nullable type mapping in route parameters. Features include automatic detection of route parameters, query parameters, body parameters, and headers using ASP.NET Core reflection patterns. Fully compatible with MCPInvoke 2.0.0+ for complete MCP tool discovery and execution.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/grparry/MCPBuckle</PackageProjectUrl>
     <RepositoryUrl>https://github.com/grparry/MCPBuckle.git</RepositoryUrl>

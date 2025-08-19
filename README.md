@@ -19,6 +19,24 @@ MCPBuckle is designed to be a **complementary tool** to Swashbuckle, not a repla
 - **Granular Control** - Include/exclude controllers and actions with flexible configuration
 - **Side-by-side with Swashbuckle** - Works seamlessly alongside existing OpenAPI tooling
 
+## What's New in 2.1.0
+
+### 🔧 Fixed - Claude Code CLI Compatibility
+
+- **Critical Fix: Optional Route Parameter Parsing** - Resolved Claude Code CLI compatibility issues
+  - Fixed regex pattern to properly strip `?` from parameter names like `{customerId?}`
+  - Parameter names now correctly parse as `customerId` instead of `customerId?`
+  - Resolves Claude Code CLI error: `Property keys should match pattern '^[a-zA-Z0-9_.-]{1,64}$'`
+
+- **Enhanced Type Mapping: Nullable Type Support** - Added support for nullable types in route parameters
+  - Nullable types like `int?`, `bool?` now correctly unwrap to their underlying type
+  - `int?` now properly maps to `"integer"` instead of `"object"` in JSON schema
+
+### ✅ Quality Assurance
+- **3 New TDD Tests Added** - Comprehensive test coverage for optional route parameter fixes
+- **128/128 Tests Passing** - All tests continue to pass, ensuring backward compatibility
+- **End-to-End Validation** - All 247 MCP tools now compatible with Claude Code CLI
+
 ## What's New in 2.0.0
 
 ### 🚀 Major Enhancement - Enhanced Parameter Source Detection

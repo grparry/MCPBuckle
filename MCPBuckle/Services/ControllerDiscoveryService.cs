@@ -467,8 +467,9 @@ namespace MCPBuckle.Services
             if (string.IsNullOrEmpty(routeTemplate))
                 return routeParams;
 
-            // Parse route template for parameters like {id}, {tenantId:int}, etc.
-            var matches = System.Text.RegularExpressions.Regex.Matches(routeTemplate, @"\{([^}:]+)(?::[^}]+)?\}");
+            // Parse route template for parameters like {id}, {tenantId:int}, {customerId?}, etc.
+            // Updated regex to handle optional parameters by stripping the '?' from parameter names
+            var matches = System.Text.RegularExpressions.Regex.Matches(routeTemplate, @"\{([^}:?]+)(?:\?)?(?::[^}]+)?\}");
             
             foreach (System.Text.RegularExpressions.Match match in matches)
             {
@@ -497,6 +498,13 @@ namespace MCPBuckle.Services
         /// </summary>
         private static string MapDotNetTypeToJsonSchemaType(Type type)
         {
+            // Handle nullable types by unwrapping them
+            var underlyingType = Nullable.GetUnderlyingType(type);
+            if (underlyingType != null)
+            {
+                type = underlyingType;
+            }
+
             if (type == typeof(string)) return "string";
             if (type == typeof(int) || type == typeof(long) || type == typeof(short) || 
                 type == typeof(uint) || type == typeof(ulong) || type == typeof(ushort)) return "integer";
@@ -666,7 +674,8 @@ namespace MCPBuckle.Services
                 return new List<string>();
 
             // Enhanced regex to handle constraints, optional parameters, catch-all parameters
-            var regex = new System.Text.RegularExpressions.Regex(@"\{(\w+)(?::[^}]*)?(?:\?[^}]*)?(?:\*[^}]*)?\}", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            // Updated to properly extract parameter name without optional '?' marker
+            var regex = new System.Text.RegularExpressions.Regex(@"\{(\w+)(?:\?)?(?::[^}]*)?(?:\*[^}]*)?\}", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
             var matches = regex.Matches(template);
             
             return matches.Cast<System.Text.RegularExpressions.Match>()
