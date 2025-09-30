@@ -105,12 +105,12 @@ namespace MCPBuckle.Services
                 return null;
 
             string memberName = $"M:{typeInfo.FullName}.{methodInfo.Name}";
-            
+
             // Handle method parameters for overloaded methods
             if (methodInfo.GetParameters().Length > 0)
             {
                 memberName += "(";
-                memberName += string.Join(",", Array.ConvertAll(methodInfo.GetParameters(), p => p.ParameterType.FullName));
+                memberName += string.Join(",", Array.ConvertAll(methodInfo.GetParameters(), p => GetXmlTypeName(p.ParameterType)));
                 memberName += ")";
             }
 
@@ -121,6 +121,37 @@ namespace MCPBuckle.Services
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Converts a Type to its XML documentation name format.
+        /// Handles generic types by converting angle brackets to curly braces.
+        /// </summary>
+        /// <param name="type">The type to convert.</param>
+        /// <returns>The XML documentation formatted type name.</returns>
+        private string GetXmlTypeName(Type type)
+        {
+            if (type.IsGenericType)
+            {
+                // Get the generic type definition name without the `N suffix
+                var genericTypeName = type.GetGenericTypeDefinition().FullName;
+                if (genericTypeName == null)
+                    return type.FullName ?? type.Name;
+
+                // Remove the `N suffix (e.g., "System.Nullable`1" -> "System.Nullable")
+                var backtickIndex = genericTypeName.IndexOf('`');
+                if (backtickIndex > 0)
+                    genericTypeName = genericTypeName.Substring(0, backtickIndex);
+
+                // Get generic arguments
+                var genericArgs = type.GetGenericArguments();
+                var genericArgNames = string.Join(",", Array.ConvertAll(genericArgs, GetXmlTypeName));
+
+                // XML format uses curly braces for generic types
+                return $"{genericTypeName}{{{genericArgNames}}}";
+            }
+
+            return type.FullName ?? type.Name;
         }
 
         /// <summary>
