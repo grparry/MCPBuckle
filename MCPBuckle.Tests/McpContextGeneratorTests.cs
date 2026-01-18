@@ -27,7 +27,7 @@ namespace MCPBuckle.Tests
             var typeSchemaGenerator = new TypeSchemaGenerator(mockXmlDocumentationService.Object, options);
             
             // Setup the discovery service to return a list of tools
-            mockDiscoveryService.Setup(d => d.DiscoverTools()).Returns(new List<McpTool>
+            mockDiscoveryService.Setup(d => d.DiscoverTools(It.IsAny<bool>())).Returns(new List<McpTool>
             {
                 new McpTool { Name = "Test_Tool", Description = "Test tool description" }
             });
@@ -63,7 +63,7 @@ namespace MCPBuckle.Tests
             });
             
             // Setup the discovery service to return a list of tools
-            mockDiscoveryService.Setup(d => d.DiscoverTools()).Returns(new List<McpTool>
+            mockDiscoveryService.Setup(d => d.DiscoverTools(It.IsAny<bool>())).Returns(new List<McpTool>
             {
                 new McpTool { Name = "Test_Tool", Description = "Test tool description" }
             });
@@ -79,7 +79,7 @@ namespace MCPBuckle.Tests
 
             // Assert
             Assert.Same(context1, context2); // Should be the same instance due to caching
-            mockDiscoveryService.Verify(d => d.DiscoverTools(), Times.Once);
+            mockDiscoveryService.Verify(d => d.DiscoverTools(It.IsAny<bool>()), Times.Once);
         }
 
         [Fact]
@@ -95,7 +95,7 @@ namespace MCPBuckle.Tests
             });
             
             // Setup the discovery service to return a list of tools
-            mockDiscoveryService.Setup(d => d.DiscoverTools()).Returns(new List<McpTool>
+            mockDiscoveryService.Setup(d => d.DiscoverTools(It.IsAny<bool>())).Returns(new List<McpTool>
             {
                 new McpTool { Name = "Test_Tool", Description = "Test tool description" }
             });
@@ -112,7 +112,7 @@ namespace MCPBuckle.Tests
 
             // Assert
             Assert.NotSame(context1, context2); // Should be different instances after cache invalidation
-            mockDiscoveryService.Verify(d => d.DiscoverTools(), Times.Exactly(2));
+            mockDiscoveryService.Verify(d => d.DiscoverTools(It.IsAny<bool>()), Times.Exactly(2));
         }
     }
 }

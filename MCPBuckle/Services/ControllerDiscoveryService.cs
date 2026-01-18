@@ -51,8 +51,12 @@ namespace MCPBuckle.Services
         /// <summary>
         /// Discovers all controllers and their actions in the application and converts them to MCP tools.
         /// </summary>
+        /// <param name="ignoreRequireExplicitInclusion">
+        /// When true, ignores the RequireExplicitInclusion option and returns all tools except those with MCPExclude.
+        /// Used by MCPInvoke to ensure all tools discovered via semantic search are executable.
+        /// </param>
         /// <returns>A list of MCP tools representing the API endpoints.</returns>
-        public List<McpTool> DiscoverTools()
+        public List<McpTool> DiscoverTools(bool ignoreRequireExplicitInclusion = false)
         {
             var tools = new List<McpTool>();
             
