@@ -88,3 +88,13 @@ artifacts/
 # JetBrains Rider
 .idea/
 *.sln.iml
+
+# Generated output
+generated/
+generated-ts/
+generated-swift/
+generated-kt/
+test-output/
+
+# ONNX models
+Assets/*.onnx
