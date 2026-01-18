@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
@@ -12,6 +13,7 @@ namespace MCPBuckle.Models
         /// Gets or sets the type of the schema.
         /// </summary>
         [JsonPropertyName("type")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
         public string Type { get; set; } = string.Empty;
 
         /// <summary>
@@ -57,6 +59,41 @@ namespace MCPBuckle.Models
         public Dictionary<string, object>? Annotations { get; set; }
 
         /// <summary>
+        /// Gets or sets the oneOf schemas for union types (polymorphic types).
+        /// </summary>
+        [JsonPropertyName("oneOf")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public List<McpSchema>? OneOf { get; set; }
+
+        /// <summary>
+        /// Gets or sets the discriminator information for polymorphic types.
+        /// </summary>
+        [JsonPropertyName("discriminator")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public McpDiscriminator? Discriminator { get; set; }
+
+        /// <summary>
+        /// Gets or sets the schema reference (e.g., "#/$defs/TypeName").
+        /// </summary>
+        [JsonPropertyName("$ref")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? Ref { get; set; }
+
+        /// <summary>
+        /// Gets or sets a constant value for discriminator properties.
+        /// </summary>
+        [JsonPropertyName("const")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public object? Const { get; set; }
+
+        /// <summary>
+        /// Gets or sets the schema definitions ($defs section).
+        /// </summary>
+        [JsonPropertyName("$defs")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public Dictionary<string, McpSchema>? Definitions { get; set; }
+
+        /// <summary>
         /// Gets or sets the parameter source (route, body, query, header) for MCPInvoke 1.4.0+ compatibility.
         /// </summary>
         [JsonIgnore]
@@ -67,6 +104,24 @@ namespace MCPBuckle.Models
         /// </summary>
         [JsonIgnore]
         public bool IsRequired { get; set; }
+
+        /// <summary>
+        /// Gets or sets the source .NET type for this schema. Used during code generation.
+        /// </summary>
+        [JsonIgnore]
+        public Type? SourceType { get; set; }
+
+        /// <summary>
+        /// Gets or sets whether this schema represents a polymorphic base type.
+        /// </summary>
+        [JsonIgnore]
+        public bool IsPolymorphicBase { get; set; }
+
+        /// <summary>
+        /// Gets or sets the discriminator value for derived types in polymorphic hierarchies.
+        /// </summary>
+        [JsonIgnore]
+        public string? DiscriminatorValue { get; set; }
 
         /// <summary>
         /// Gets or sets additional properties for the schema.

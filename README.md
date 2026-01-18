@@ -317,6 +317,134 @@ public ActionResult<OrderItem> UpdateOrderItem(
 }
 ```
 
+## Polymorphic Type Support (.NET 7.0+)
+
+MCPBuckle supports polymorphic types using System.Text.Json's `JsonPolymorphic` and `JsonDerivedType` attributes. This enables proper discriminated union generation for TypeScript and Zod schemas.
+
+### Defining Polymorphic Types
+
+```csharp
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
+[JsonDerivedType(typeof(TextPrimitive), "text")]
+[JsonDerivedType(typeof(StackPrimitive), "stack")]
+[JsonDerivedType(typeof(ButtonPrimitive), "button")]
+public abstract class RenderPrimitive
+{
+    public string? Id { get; set; }
+}
+
+public class TextPrimitive : RenderPrimitive
+{
+    public string? Content { get; set; }
+}
+
+public class StackPrimitive : RenderPrimitive
+{
+    public string? Direction { get; set; }
+    public IReadOnlyList<RenderPrimitive>? Children { get; set; }
+}
+
+public class ButtonPrimitive : RenderPrimitive
+{
+    public string? Label { get; set; }
+    public string? ActionRef { get; set; }
+}
+```
+
+### Generated JSON Schema
+
+MCPBuckle generates OpenAPI-compliant schemas with `oneOf`, `discriminator`, and `$defs`:
+
+```json
+{
+  "oneOf": [
+    { "$ref": "#/$defs/TextPrimitive" },
+    { "$ref": "#/$defs/StackPrimitive" },
+    { "$ref": "#/$defs/ButtonPrimitive" }
+  ],
+  "discriminator": {
+    "propertyName": "type",
+    "mapping": {
+      "text": "#/$defs/TextPrimitive",
+      "stack": "#/$defs/StackPrimitive",
+      "button": "#/$defs/ButtonPrimitive"
+    }
+  },
+  "$defs": {
+    "TextPrimitive": {
+      "type": "object",
+      "properties": {
+        "type": { "const": "text" },
+        "id": { "type": "string" },
+        "content": { "type": "string" }
+      },
+      "required": ["type"]
+    }
+    // ... other variants
+  }
+}
+```
+
+### Code Generation (MCPBuckle.CodeGen)
+
+The `MCPBuckle.CodeGen` CLI generates TypeScript interfaces and Zod schemas:
+
+```bash
+dotnet run --project MCPBuckle.CodeGen -- generate \
+  --assembly ./bin/Debug/net9.0/MyApp.dll \
+  --output ./generated \
+  --types RenderPrimitive
+```
+
+**Generated TypeScript:**
+```typescript
+export interface TextPrimitive {
+  type: 'text';
+  id?: string;
+  content?: string;
+}
+
+export interface StackPrimitive {
+  type: 'stack';
+  id?: string;
+  direction?: string;
+  children?: RenderPrimitive[];
+}
+
+export type RenderPrimitive = TextPrimitive | StackPrimitive | ButtonPrimitive;
+```
+
+**Generated Zod Schema:**
+```typescript
+export const TextPrimitiveSchema = z.object({
+  type: z.literal('text'),
+  id: z.string().optional(),
+  content: z.string().optional(),
+});
+
+export const StackPrimitiveSchema: z.ZodType<StackPrimitive> = z.lazy(() =>
+  z.object({
+    type: z.literal('stack'),
+    id: z.string().optional(),
+    direction: z.string().optional(),
+    children: z.array(RenderPrimitiveSchema).optional(),
+  })
+);
+
+export const RenderPrimitiveSchema = z.union([
+  TextPrimitiveSchema,
+  StackPrimitiveSchema,
+  ButtonPrimitiveSchema,
+]);
+```
+
+### Features
+
+- **Discriminated Unions**: Proper `oneOf` + `discriminator` for OpenAPI compliance
+- **Recursive Types**: Handled with `z.lazy()` for Zod schemas
+- **Circular Reference Detection**: Automatic detection using Tarjan's algorithm
+- **Zod v4 Compatibility**: Uses `z.union()` for unions containing lazy types
+
 ## Side-by-Side with Swashbuckle
 
 MCPBuckle is designed to work alongside Swashbuckle. You can use both in the same project:

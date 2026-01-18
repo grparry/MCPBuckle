@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Reflection;
+using System.Text.Json.Serialization;
 using MCPBuckle.Configuration;
 using MCPBuckle.Models;
 using Microsoft.Extensions.Options;
@@ -69,6 +70,15 @@ namespace MCPBuckle.Services
 
             try
             {
+#if NET7_0_OR_GREATER
+                // Check for polymorphic types first (JsonPolymorphic attribute)
+                var polymorphicInfo = GetPolymorphicTypeInfo(type);
+                if (polymorphicInfo != null)
+                {
+                    return GeneratePolymorphicSchema(polymorphicInfo);
+                }
+#endif
+
                 // Special handling for enum types
                 if (type.IsEnum)
                 {
@@ -301,5 +311,175 @@ namespace MCPBuckle.Services
         public class IgnoreDataMemberAttribute : Attribute
         {
         }
+
+#if NET7_0_OR_GREATER
+        /// <summary>
+        /// Detects if a type is a polymorphic base type with JsonPolymorphic and JsonDerivedType attributes.
+        /// </summary>
+        /// <param name="type">The type to check.</param>
+        /// <returns>Polymorphic type info if the type is polymorphic, null otherwise.</returns>
+        public PolymorphicTypeInfo? GetPolymorphicTypeInfo(Type type)
+        {
+            // Look for JsonPolymorphicAttribute
+            var polymorphicAttr = type.GetCustomAttribute<JsonPolymorphicAttribute>();
+            if (polymorphicAttr == null)
+            {
+                return null;
+            }
+
+            var info = new PolymorphicTypeInfo
+            {
+                BaseType = type,
+                DiscriminatorPropertyName = polymorphicAttr.TypeDiscriminatorPropertyName ?? "$type"
+            };
+
+            // Look for JsonDerivedTypeAttribute on the type
+            var derivedTypeAttrs = type.GetCustomAttributes<JsonDerivedTypeAttribute>();
+            foreach (var attr in derivedTypeAttrs)
+            {
+                var derivedType = attr.DerivedType;
+                string discriminatorValue;
+
+                // Get the discriminator value - can be string or int
+                if (attr.TypeDiscriminator is string strDiscriminator)
+                {
+                    discriminatorValue = strDiscriminator;
+                }
+                else if (attr.TypeDiscriminator is int intDiscriminator)
+                {
+                    discriminatorValue = intDiscriminator.ToString();
+                }
+                else if (attr.TypeDiscriminator != null)
+                {
+                    discriminatorValue = attr.TypeDiscriminator.ToString() ?? derivedType.Name;
+                }
+                else
+                {
+                    // Fall back to type name if no discriminator specified
+                    discriminatorValue = derivedType.Name;
+                    info.UseTypeNameAsDiscriminator = true;
+                }
+
+                info.DerivedTypes[discriminatorValue] = derivedType;
+            }
+
+            return info.DerivedTypes.Count > 0 ? info : null;
+        }
+
+        /// <summary>
+        /// Generates a polymorphic schema with oneOf and discriminator.
+        /// </summary>
+        /// <param name="polymorphicInfo">The polymorphic type information.</param>
+        /// <returns>The generated polymorphic schema.</returns>
+        public McpSchema GeneratePolymorphicSchema(PolymorphicTypeInfo polymorphicInfo)
+        {
+            var schema = new McpSchema
+            {
+                OneOf = new List<McpSchema>(),
+                Discriminator = new McpDiscriminator
+                {
+                    PropertyName = polymorphicInfo.DiscriminatorPropertyName,
+                    Mapping = new Dictionary<string, string>()
+                },
+                Definitions = new Dictionary<string, McpSchema>(),
+                SourceType = polymorphicInfo.BaseType,
+                IsPolymorphicBase = true
+            };
+
+            foreach (var (discriminatorValue, derivedType) in polymorphicInfo.DerivedTypes)
+            {
+                var typeName = derivedType.Name;
+                var refPath = $"#/$defs/{typeName}";
+
+                // Add to discriminator mapping
+                schema.Discriminator.Mapping[discriminatorValue] = refPath;
+
+                // Add ref to oneOf
+                schema.OneOf.Add(new McpSchema
+                {
+                    Ref = refPath,
+                    SourceType = derivedType,
+                    DiscriminatorValue = discriminatorValue
+                });
+
+                // Generate the derived type schema with const discriminator
+                var derivedSchema = GenerateDerivedTypeSchema(
+                    derivedType,
+                    polymorphicInfo.DiscriminatorPropertyName,
+                    discriminatorValue);
+
+                schema.Definitions[typeName] = derivedSchema;
+            }
+
+            // Cache the polymorphic schema
+            _schemaCache[polymorphicInfo.BaseType] = schema;
+
+            return schema;
+        }
+
+        /// <summary>
+        /// Generates a schema for a derived type in a polymorphic hierarchy, including const discriminator.
+        /// </summary>
+        /// <param name="derivedType">The derived type.</param>
+        /// <param name="discriminatorPropertyName">The name of the discriminator property.</param>
+        /// <param name="discriminatorValue">The discriminator value for this type.</param>
+        /// <returns>The generated schema for the derived type.</returns>
+        public McpSchema GenerateDerivedTypeSchema(Type derivedType, string discriminatorPropertyName, string discriminatorValue)
+        {
+            var schema = new McpSchema
+            {
+                Type = "object",
+                Properties = new Dictionary<string, McpSchema>(),
+                Required = new List<string>(),
+                SourceType = derivedType,
+                DiscriminatorValue = discriminatorValue
+            };
+
+            // Add the discriminator property with const value
+            schema.Properties[discriminatorPropertyName] = new McpSchema
+            {
+                Type = "string",
+                Const = discriminatorValue
+            };
+            schema.Required.Add(discriminatorPropertyName);
+
+            // Get properties (excluding the discriminator if it exists as a real property)
+            var properties = derivedType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .Where(p => p.CanRead &&
+                            !p.GetCustomAttributes<IgnoreDataMemberAttribute>().Any() &&
+                            !p.GetCustomAttributes<JsonIgnoreAttribute>().Any() &&
+                            !string.Equals(p.Name, discriminatorPropertyName, StringComparison.OrdinalIgnoreCase));
+
+            foreach (var property in properties)
+            {
+                var propertySchema = GenerateSchema(property.PropertyType);
+
+                // Add property description from attributes
+                if (_options.IncludePropertyDescriptions)
+                {
+                    var propertyDescription = GetPropertyDescription(derivedType, property);
+                    if (!string.IsNullOrEmpty(propertyDescription))
+                    {
+                        propertySchema.Description = propertyDescription;
+                    }
+                }
+
+                // Check if property is required
+                var isRequired = property.GetCustomAttribute<RequiredAttribute>() != null;
+                if (isRequired)
+                {
+                    schema.Required.Add(property.Name);
+                }
+
+                // Use JsonPropertyName if present
+                var jsonPropertyName = property.GetCustomAttribute<JsonPropertyNameAttribute>();
+                var propName = jsonPropertyName?.Name ?? property.Name;
+
+                schema.Properties[propName] = propertySchema;
+            }
+
+            return schema;
+        }
+#endif
     }
 }
